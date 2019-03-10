@@ -1,0 +1,1 @@
+mybatis代码生成工具。根据mybatis规范生成表对应的实体，Mapper，SqlProvider
