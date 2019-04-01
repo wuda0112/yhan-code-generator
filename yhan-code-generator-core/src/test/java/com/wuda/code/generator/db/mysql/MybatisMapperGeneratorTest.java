@@ -1,13 +1,12 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.JavaFile;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.List;
 
-public class MybatisMapperGeneratorTest {
+public class MybatisMapperGeneratorTest extends GeneratorTestBase{
 
     @Test
     public void testGenJavaFile() {
@@ -15,13 +14,8 @@ public class MybatisMapperGeneratorTest {
         MyBatisMapperGenerator myBatisMapperGenerator = new MyBatisMapperGenerator();
         List<Table> tables = tableTest.getTable();
         for (Table table : tables) {
-            JavaFile javaFile = myBatisMapperGenerator.genJavaFile(table, "com.wuda.tester.mysql");
-            try {
-                javaFile.writeTo(Paths.get("e:/code/"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            System.out.println(javaFile.toString());
+            JavaFile javaFile = myBatisMapperGenerator.genJavaFile(table, packageName);
+            printAndWrite(javaFile);
         }
     }
 }

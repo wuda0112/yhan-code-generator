@@ -3,15 +3,14 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.MethodSpecUtil;
 import com.wuda.yhan.code.generator.lang.TableEntity;
+import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.IsSetField;
 
 import javax.lang.model.element.Modifier;
-import javax.persistence.Column;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeSet;
 
 /**
  * 生成表对应的实体.
@@ -23,88 +22,82 @@ public class EntityGenerator {
     /**
      * 生成java class文件.
      *
-     * @param table
-     *         表的基本信息
-     * @param packageName
-     *         生成的类所属的包
+     * @param table       表的基本信息
+     * @param packageName 生成的类所属的包
      * @return java file
      */
     public JavaFile genJavaFile(Table table, String packageName) {
-        String className = EntityGeneratorUtil.genClassName(table.getTableName());
+        String className = EntityGeneratorUtil.genClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.addSuperinterface(TypeName.get(TableEntity.class));
         classBuilder.addSuperinterface(TypeName.get(Serializable.class));
         classBuilder.addAnnotation(genTableAnnotation(table));
-        Iterable<FieldSpec> fieldSpecs = genFields(table.getColumns());
+        Iterable<FieldSpec> fieldSpecs = genFields(table.columns());
         if (fieldSpecs != null) {
             classBuilder.addFields(fieldSpecs);
             classBuilder.addMethods(genGetterAndSetter(fieldSpecs));
         }
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.getTableSchema());
+        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 
     /**
      * class级别的注解.
      *
-     * @param table
-     *         table
+     * @param table table
      * @return {@link javax.persistence.Table}注解
      */
     private AnnotationSpec genTableAnnotation(Table table) {
         return AnnotationSpec.builder(javax.persistence.Table.class)
-                .addMember("schema", "$S", table.getTableSchema())
-                .addMember("name", "$S", table.getTableName())
+                .addMember("schema", "$S", table.id().schema())
+                .addMember("name", "$S", table.id().table())
                 .build();
     }
 
     /**
      * field 上的注解.
      *
-     * @param columnMetaInfo
-     *         列的元数据
-     * @return {@link Column}注解
+     * @param column 列
+     * @return {@link javax.persistence.Column}注解
      */
-    private AnnotationSpec genColumnAnnotation(Table.ColumnMetaInfo columnMetaInfo) {
-        return AnnotationSpec.builder(Column.class)
-                .addMember("name", "$S", columnMetaInfo.getColumnName())
-                .addMember("length", "$L", columnMetaInfo.getLength())
-                .addMember("columnDefinition", "$S", columnMetaInfo.getColumnDefinition())
+    private AnnotationSpec genColumnAnnotation(Column column) {
+        return AnnotationSpec.builder(javax.persistence.Column.class)
+                .addMember("name", "$S", column.name())
+                .addMember("length", "$L", column.length())
+                .addMember("columnDefinition", "$S", column.typeExpression())
                 .build();
     }
 
     /**
      * 为列生成对应的属性.
      *
-     * @param columns
-     *         列
+     * @param columns 列
      * @return iterator of fields
      */
-    private Iterable<FieldSpec> genFields(TreeSet<Table.ColumnMetaInfo> columns) {
+    private Iterable<FieldSpec> genFields(List<Column> columns) {
         if (columns == null || columns.isEmpty()) {
             return null;
         }
         List<FieldSpec> list = new ArrayList<>(columns.size());
-        for (Table.ColumnMetaInfo columnMetaInfo : columns) {
-            list.add(genField(columnMetaInfo));
-            list.add(genIsSetField(columnMetaInfo));
+        for (Column column : columns) {
+            list.add(genField(column));
+            list.add(genIsSetField(column));
         }
-        return list::iterator;
+        return list;
     }
 
     /**
      * 生成列对应的属性.
      *
-     * @param columnMetaInfo
-     *         列
+     * @param column 列
      * @return 属性
      */
-    private FieldSpec genField(Table.ColumnMetaInfo columnMetaInfo) {
-        String columnName = columnMetaInfo.getColumnName();
-        Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(columnMetaInfo.getDataType());
+    private FieldSpec genField(Column column) {
+        String columnName = column.name();
+        Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
         String fieldName = EntityGeneratorUtil.genFieldName(columnName);
-        AnnotationSpec annotationSpec = genColumnAnnotation(columnMetaInfo);
+        AnnotationSpec annotationSpec = genColumnAnnotation(column);
         return FieldSpec.builder(type, fieldName, Modifier.PRIVATE)
                 .addAnnotation(annotationSpec)
                 .build();
@@ -114,12 +107,11 @@ public class EntityGenerator {
      * 如果列的名称是: product_name,此方法将生成<pre>private boolean productNameIsSet;</pre>
      * 属性.
      *
-     * @param columnMetaInfo
-     *         列
+     * @param column 列
      * @return field
      */
-    private FieldSpec genIsSetField(Table.ColumnMetaInfo columnMetaInfo) {
-        String columnName = columnMetaInfo.getColumnName();
+    private FieldSpec genIsSetField(Column column) {
+        String columnName = column.name();
         String fieldName = EntityGeneratorUtil.genIsSetFieldName(columnName);
         return FieldSpec.builder(TypeName.BOOLEAN, fieldName, Modifier.PRIVATE)
                 .addAnnotation(genIsSetFieldAnnotation(columnName))
@@ -129,8 +121,7 @@ public class EntityGenerator {
     /**
      * 生成{@link IsSetField}注解.
      *
-     * @param columnName
-     *         列名
+     * @param columnName 列名
      * @return {@link IsSetField}
      */
     private AnnotationSpec genIsSetFieldAnnotation(String columnName) {
@@ -143,8 +134,7 @@ public class EntityGenerator {
     /**
      * 为给定的field生成getter/setter.
      *
-     * @param fieldSpecs
-     *         field
+     * @param fieldSpecs field
      * @return getter/setter
      */
     private Iterable<MethodSpec> genGetterAndSetter(Iterable<FieldSpec> fieldSpecs) {
@@ -155,7 +145,7 @@ public class EntityGenerator {
                 list.add(MethodSpecUtil.genSetter(fieldSpec, true));
             }
         }
-        return list::iterator;
+        return list;
     }
 
     private boolean hasIsSetFieldAnnotation(List<AnnotationSpec> annotationSpecs) {

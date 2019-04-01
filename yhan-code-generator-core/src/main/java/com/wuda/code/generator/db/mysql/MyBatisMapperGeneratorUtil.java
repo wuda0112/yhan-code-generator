@@ -4,13 +4,14 @@ import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ParameterSpec;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.JavaNamingUtil;
 import com.wuda.yhan.util.commons.StringUtil;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeSet;
 
 /**
  * {@link MyBatisMapperGenerator}生成代码时,命名工具类.
@@ -22,8 +23,7 @@ class MyBatisMapperGeneratorUtil {
     /**
      * 根据表名生成类名.
      *
-     * @param tableName
-     *         表名称
+     * @param tableName 表名称
      * @return 类名
      */
     static String genClassName(String tableName) {
@@ -90,32 +90,29 @@ class MyBatisMapperGeneratorUtil {
     /**
      * 主键中的字段生成参数.
      *
-     * @param table
-     *         table
-     * @param mybatisParamAnnotation
-     *         是否在参数前添加{@link org.apache.ibatis.annotations.Param}注解
+     * @param table                  table
+     * @param mybatisParamAnnotation 是否在参数前添加{@link org.apache.ibatis.annotations.Param}注解
      * @return 主键中可能是多个column
      */
     static Iterable<ParameterSpec> genPrimaryKeyParameter(Table table, boolean mybatisParamAnnotation) {
-        TreeSet<Table.ColumnMetaInfo> primaryKeyColumns = table.getPrimaryKey();
+        List<Column> primaryKeyColumns = table.primaryKeyColumns();
         List<ParameterSpec> list = new ArrayList<>(primaryKeyColumns.size());
-        for (Table.ColumnMetaInfo columnMetaInfo : primaryKeyColumns) {
-            Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(columnMetaInfo.getDataType());
-            String parameterName = EntityGeneratorUtil.genFieldName(columnMetaInfo.getColumnName());
+        for (Column column : primaryKeyColumns) {
+            Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
+            String parameterName = EntityGeneratorUtil.genFieldName(column.name());
             ParameterSpec.Builder builder = ParameterSpec.builder(type, parameterName);
             if (mybatisParamAnnotation) {
                 builder.addAnnotation(genMybatisParamAnnotion(parameterName));
             }
             list.add(builder.build());
         }
-        return list::iterator;
+        return list;
     }
 
     /**
      * 生成{@link Param}注解.
      *
-     * @param parameterName
-     *         parameter name
+     * @param parameterName parameter name
      * @return {@link Param}注解
      */
     static AnnotationSpec genMybatisParamAnnotion(String parameterName) {
@@ -127,8 +124,7 @@ class MyBatisMapperGeneratorUtil {
     /**
      * select方法的返回列参数.
      *
-     * @param mybatisParamAnnotation
-     *         是否需要在参数前添加{@link Param}注解
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
      * @return ParameterSpec
      */
     static ParameterSpec genRetrieveColumnsParam(boolean mybatisParamAnnotation) {

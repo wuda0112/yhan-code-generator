@@ -2,6 +2,7 @@ package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.ClassName;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.JavaNamingUtil;
 import com.wuda.yhan.util.commons.StringUtil;
 
@@ -41,8 +42,8 @@ class SqlBuilderGeneratorUtil {
      * @return 每个表对应的sql builder类的{@link ClassName}
      */
     static ClassName genSqlBuilderClassName(Table table, String packageName) {
-        String className = SqlBuilderGeneratorUtil.getClassName(table.getTableName());
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.getTableSchema());
+        String className = SqlBuilderGeneratorUtil.getClassName(table.id().table());
+        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
         return ClassName.get(finalPackageName, className);
     }
 

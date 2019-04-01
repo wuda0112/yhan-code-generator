@@ -1,10 +1,12 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
+import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import org.apache.ibatis.annotations.*;
 
 import javax.lang.model.element.Modifier;
-import java.util.TreeSet;
+import java.util.List;
 
 /**
  * 生成表对应的mybatis mapper接口.
@@ -16,14 +18,12 @@ public class MyBatisMapperGenerator {
     /**
      * 生成java class文件.
      *
-     * @param table
-     *         表的基本信息
-     * @param packageName
-     *         生成的类所属的包
+     * @param table       表的基本信息
+     * @param packageName 生成的类所属的包
      * @return java file
      */
     public JavaFile genJavaFile(Table table, String packageName) {
-        String className = MyBatisMapperGeneratorUtil.genClassName(table.getTableName());
+        String className = MyBatisMapperGeneratorUtil.genClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.interfaceBuilder(className);
         classBuilder.addAnnotation(genMapperAnnotation());
         classBuilder.addModifiers(Modifier.PUBLIC);
@@ -32,7 +32,7 @@ public class MyBatisMapperGenerator {
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genUpdateMethod(table, packageName));
         classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName));
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.getTableSchema());
+        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 
@@ -48,10 +48,8 @@ public class MyBatisMapperGenerator {
     /**
      * 生成insert方法.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return insert method
      */
     private MethodSpec genInsertMethod(Table table, String packageName) {
@@ -68,10 +66,8 @@ public class MyBatisMapperGenerator {
     /**
      * {@link #genInsertMethod(Table, String)}方法上的{@link InsertProvider}注解.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return {@link InsertProvider}
      */
     private AnnotationSpec insertMethodAnnotation(Table table, String packageName) {
@@ -84,10 +80,8 @@ public class MyBatisMapperGenerator {
     /**
      * 生成批量insert方法.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return batch insert method
      */
     private MethodSpec genBatchInsertMethod(Table table, String packageName) {
@@ -104,8 +98,7 @@ public class MyBatisMapperGenerator {
     /**
      * {@link #genBatchInsertMethod(Table, String)}方法上的{@link Insert}注解.
      *
-     * @param table
-     *         table
+     * @param table table
      * @return {@link Insert}
      */
     private AnnotationSpec batchInsertMethodAnnotation(Table table) {
@@ -117,8 +110,7 @@ public class MyBatisMapperGenerator {
     /**
      * batch insert sql语句.也就是方法上{@link Insert}注解的值.
      *
-     * @param table
-     *         数据库表
+     * @param table 数据库表
      * @return 批量插入方法的sql
      */
     private String batchInsertScript(Table table) {
@@ -129,12 +121,12 @@ public class MyBatisMapperGenerator {
         builder.append(newLine);
         builder.append("INSERT INTO ").append(schemaDotTable);
 
-        TreeSet<Table.ColumnMetaInfo> columnMetaInfoSet = table.getColumns();
+        List<Column> tableColumns= table.columns();
         StringBuilder columns = new StringBuilder();
         StringBuilder values = new StringBuilder();
         String columnName;
-        for (Table.ColumnMetaInfo columnMetaInfo : columnMetaInfoSet) {
-            columnName = columnMetaInfo.getColumnName();
+        for (Column column : tableColumns) {
+            columnName = column.name();
             columns.append(columnName).append(",");
             values.append("#{entity.").append(EntityGeneratorUtil.genFieldName(columnName)).append("},");
         }
@@ -158,10 +150,8 @@ public class MyBatisMapperGenerator {
     /**
      * 生成delete by primary key方法.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return method
      */
     private MethodSpec genDeleteByPrimaryKeyMethod(Table table, String packageName) {
@@ -176,10 +166,8 @@ public class MyBatisMapperGenerator {
     /**
      * 为{@link #genDeleteByPrimaryKeyMethod(Table, String)}生成{@link DeleteProvider}注解.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return {@link DeleteProvider}
      */
     private AnnotationSpec deleteByPrimaryKeyMethodAnnotation(Table table, String packageName) {
@@ -192,10 +180,8 @@ public class MyBatisMapperGenerator {
     /**
      * 生成update方法.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return update method
      */
     private MethodSpec genUpdateMethod(Table table, String packageName) {
@@ -212,10 +198,8 @@ public class MyBatisMapperGenerator {
     /**
      * {@link #genUpdateMethod(Table, String)}方法上的{@link UpdateProvider}注解.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return {@link UpdateProvider}
      */
     private AnnotationSpec updateMethodAnnotation(Table table, String packageName) {
@@ -228,10 +212,8 @@ public class MyBatisMapperGenerator {
     /**
      * 生成select by primary key方法.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return method
      */
     private MethodSpec genSelectByPrimaryKeyMethod(Table table, String packageName) {
@@ -247,10 +229,8 @@ public class MyBatisMapperGenerator {
     /**
      * 为{@link #genSelectByPrimaryKeyMethod(Table, String)}生成{@link SelectProvider}注解.
      *
-     * @param table
-     *         table
-     * @param packageName
-     *         package name
+     * @param table       table
+     * @param packageName package name
      * @return {@link SelectProvider}
      */
     private AnnotationSpec selectByPrimaryKeyMethodAnnotation(Table table, String packageName) {

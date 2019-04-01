@@ -4,12 +4,14 @@ import com.squareup.javapoet.*;
 import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.TableEntity;
 import com.wuda.yhan.code.generator.lang.TableEntityUtils;
+import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.IsSetFieldUtil;
 import org.apache.ibatis.jdbc.SQL;
 
 import javax.lang.model.element.Modifier;
-import javax.persistence.Column;
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,31 +24,27 @@ public class SqlBuilderGenerator {
     /**
      * 生成java class文件.
      *
-     * @param table
-     *         表的基本信息
-     * @param packageName
-     *         生成的类所属的包
+     * @param table       表的基本信息
+     * @param packageName 生成的类所属的包
      * @return java file
      */
     public JavaFile genJavaFile(Table table, String packageName) {
-        String className = SqlBuilderGeneratorUtil.getClassName(table.getTableName());
+        String className = SqlBuilderGeneratorUtil.getClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.addMethod(genInsertMethod(table, packageName));
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table));
         classBuilder.addMethod(genSelectByPrimaryKeyMethod(table));
         classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.getTableSchema());
+        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 
     /**
      * generate insert method.
      *
-     * @param table
-     *         表的基本信息
-     * @param packageName
-     *         生成的类所属的包
+     * @param table       表的基本信息
+     * @param packageName 生成的类所属的包
      * @return insert method
      */
     private MethodSpec genInsertMethod(Table table, String packageName) {
@@ -75,10 +73,8 @@ public class SqlBuilderGenerator {
     /**
      * 为{@link #genInsertMethod(Table, String)}提供方法体模板.
      *
-     * @param schemaDotTable
-     *         schema.table
-     * @param entity
-     *         表对应的实体
+     * @param schemaDotTable schema.table
+     * @param entity         表对应的实体
      * @return sql
      */
     @SuppressWarnings("unused")
@@ -96,8 +92,7 @@ public class SqlBuilderGenerator {
     /**
      * generate delete method.
      *
-     * @param table
-     *         table
+     * @param table table
      * @return delete method
      */
     private MethodSpec genDeleteByPrimaryKeyMethod(Table table) {
@@ -119,10 +114,8 @@ public class SqlBuilderGenerator {
     /**
      * 为{@link #genDeleteByPrimaryKeyMethod(Table)}提供方法提的模板.
      *
-     * @param schemaDotTable
-     *         schema.table
-     * @param primaryKeyColumns
-     *         primary key
+     * @param schemaDotTable    schema.table
+     * @param primaryKeyColumns primary key
      * @return sql
      */
     @SuppressWarnings("unused")
@@ -136,10 +129,8 @@ public class SqlBuilderGenerator {
     /**
      * generate update method.
      *
-     * @param table
-     *         table
-     * @param userSpecifyPackageName
-     *         package name
+     * @param table                  table
+     * @param userSpecifyPackageName package name
      * @return update method
      */
     private MethodSpec genUpdateByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
@@ -147,7 +138,7 @@ public class SqlBuilderGenerator {
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         ParameterSpec entityParameter = EntityGeneratorUtil.genEntityParameter(table, userSpecifyPackageName);
         String schemaDotTable = PackageNameUtil.getSchemaDotTable(table);
-        ClassName columnClass = ClassName.get(Column.class);
+        ClassName columnClass = ClassName.get(javax.persistence.Column.class);
         builder.addModifiers(Modifier.PUBLIC, Modifier.STATIC);
         builder.returns(String.class);
         builder.addParameter(entityParameter);
@@ -158,7 +149,7 @@ public class SqlBuilderGenerator {
         builder.addStatement("$T sql = new $T()", SQL.class, SQL.class);
         builder.addStatement("sql.UPDATE($S)", schemaDotTable);
         builder.beginControlFlow("for ($T field : setterCalledFields)", Field.class);
-        builder.addStatement("$T columnAnnotation = field.getAnnotation($T.class)", Column.class, columnClass);
+        builder.addStatement("$T columnAnnotation = field.getAnnotation($T.class)", javax.persistence.Column.class, columnClass);
         builder.addStatement("$T columnName = columnAnnotation.name()", String.class);
         builder.addStatement("$T fieldName = field.getName()", String.class);
         builder.addStatement("$T sb = new $T(columnName.length() + fieldName.length() + 3)", StringBuilder.class, StringBuilder.class);
@@ -172,12 +163,9 @@ public class SqlBuilderGenerator {
     /**
      * 为{@link #genUpdateByPrimaryKeyMethod(Table, String)}提供方法体模板.
      *
-     * @param schemaDotTable
-     *         schema.table
-     * @param primaryKeyColumns
-     *         primary key
-     * @param entity
-     *         表对应的实体
+     * @param schemaDotTable    schema.table
+     * @param primaryKeyColumns primary key
+     * @param entity            表对应的实体
      * @return sql
      */
     @SuppressWarnings("unused")
@@ -190,7 +178,7 @@ public class SqlBuilderGenerator {
         SQL sql = new SQL();
         sql.UPDATE(schemaDotTable);
         for (Field field : setterCalledFields) {
-            Column columnAnnotation = field.getAnnotation(Column.class);
+            javax.persistence.Column columnAnnotation = field.getAnnotation(javax.persistence.Column.class);
             String columnName = columnAnnotation.name();
             String fieldName = field.getName();
             StringBuilder sb = new StringBuilder(columnName.length() + fieldName.length() + 3);
@@ -204,8 +192,7 @@ public class SqlBuilderGenerator {
     /**
      * generate select method.
      *
-     * @param table
-     *         table
+     * @param table table
      * @return select method
      */
     private MethodSpec genSelectByPrimaryKeyMethod(Table table) {
@@ -231,12 +218,9 @@ public class SqlBuilderGenerator {
     /**
      * 为{@link #genSelectByPrimaryKeyMethod(Table)}提供方法体模板.
      *
-     * @param schemaDotTable
-     *         schema.table
-     * @param primaryKeyColumns
-     *         primary key
-     * @param columns
-     *         需要返回的列
+     * @param schemaDotTable    schema.table
+     * @param primaryKeyColumns primary key
+     * @param columns           需要返回的列
      * @return sql
      */
     @SuppressWarnings("unused")
@@ -253,10 +237,8 @@ public class SqlBuilderGenerator {
     /**
      * 为sql添加主键查询条件.
      *
-     * @param sql
-     *         SQL
-     * @param primaryKeyColumns
-     *         主键中的列
+     * @param sql               SQL
+     * @param primaryKeyColumns 主键中的列
      */
     private void appendPrimaryKeyConditions(SQL sql, String[] primaryKeyColumns) {
         String fieldName;
@@ -269,14 +251,13 @@ public class SqlBuilderGenerator {
     /**
      * 为方法追加主键的查询条件.
      *
-     * @param builder
-     *         MethodSpec.Builder
-     * @param table
-     *         table contains primary key
+     * @param builder MethodSpec.Builder
+     * @param table   table contains primary key
      */
     private void appendPrimaryKeyConditions(MethodSpec.Builder builder, Table table) {
-        String[] primaryKeyColumns = table.getPrimaryKeyColumns();
-        for (String columnName : primaryKeyColumns) {
+        List<Column> primaryKeyColumns = table.primaryKeyColumns();
+        for (Column column : primaryKeyColumns) {
+            String columnName = column.name();
             String fieldName = EntityGeneratorUtil.genFieldName(columnName);
             builder.addStatement("sql.WHERE(\"$L=#{$L}\")", columnName, fieldName);
         }
