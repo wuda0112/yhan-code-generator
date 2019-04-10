@@ -1,5 +1,7 @@
 package com.wuda.yhan.code.generator.lang.relational;
 
+import lombok.ToString;
+
 import java.util.List;
 
 /**
@@ -9,6 +11,7 @@ import java.util.List;
  *
  * @author wuda
  */
+@ToString
 public class Table {
 
     /**
@@ -30,6 +33,23 @@ public class Table {
      */
     private List<Index> indices;
 
+    /**
+     * 获取表中的索引.
+     *
+     * @return 索引, 不包含主键
+     */
+    public List<Index> getIndices() {
+        return indices;
+    }
+
+    /**
+     * 设置索引信息.
+     *
+     * @param indices 索引信息,不包含主键
+     */
+    public void setIndices(List<Index> indices) {
+        this.indices = indices;
+    }
 
     public TableId id() {
         io.debezium.relational.TableId tableId = actualTable.id();

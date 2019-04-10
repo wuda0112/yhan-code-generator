@@ -36,5 +36,13 @@ public class Constant {
      * mapper类名称的后缀.
      */
     public final static String MAPPER_CLASS_NAME_SUFFIX = "Mapper";
+    /**
+     * 分页中的offset.
+     */
+    public final static String PAGING_OFFSET="offset";
+    /**
+     * 分页中的row count.
+     */
+    public final static String PAGING_ROW_COUNT="rowCount";
 
 }

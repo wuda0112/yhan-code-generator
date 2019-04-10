@@ -4,6 +4,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
+import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 
@@ -21,18 +22,18 @@ public class TableMetaInfoGenerator {
     /**
      * 生成java class文件.
      *
-     * @param table
-     *         表的基本信息
-     * @param packageName
-     *         生成的类所属的包
+     * @param table       表的基本信息
+     * @param packageName 生成的类所属的包
      * @return java file
      */
     public JavaFile genJavaFile(Table table, String packageName) {
-        String className = TableMetaInfoGeneratorUtil.genClassName(table.id().table());
+        String className = TableMetaInfoGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.addField(genSchemaField(table));
         classBuilder.addField(genTableNameField(table));
+        classBuilder.addField(genSchemaDotTableField(table));
+        classBuilder.addField(genPrimaryKeyField(table));
         Iterable<FieldSpec> fieldSpecs = genFields(table);
         if (fieldSpecs != null) {
             classBuilder.addFields(fieldSpecs);
@@ -44,8 +45,7 @@ public class TableMetaInfoGenerator {
     /**
      * 为列生成对应的属性.
      *
-     * @param table
-     *         table
+     * @param table table
      * @return iterator of fields
      */
     private Iterable<FieldSpec> genFields(Table table) {
@@ -65,12 +65,11 @@ public class TableMetaInfoGenerator {
     /**
      * TABLE_NAME field
      *
-     * @param table
-     *         table
+     * @param table table
      * @return field
      */
     private FieldSpec genTableNameField(Table table) {
-        return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getTableNameFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
+        return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getTableFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
                 .initializer("$S", table.id().table())
                 .build();
     }
@@ -78,8 +77,7 @@ public class TableMetaInfoGenerator {
     /**
      * SCHEMA field
      *
-     * @param table
-     *         table
+     * @param table table
      * @return field
      */
     private FieldSpec genSchemaField(Table table) {
@@ -89,15 +87,40 @@ public class TableMetaInfoGenerator {
     }
 
     /**
+     * SCHEMA DOT TABLE field
+     *
+     * @param table table
+     * @return field
+     */
+    private FieldSpec genSchemaDotTableField(Table table) {
+        return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
+                .initializer("$S", table.id().toQuotedString('`'))
+                .build();
+    }
+
+    /**
+     * primary key field
+     *
+     * @param table table
+     * @return field
+     */
+    private FieldSpec genPrimaryKeyField(Table table) {
+        List<String> primaryKeyColumns = table.primaryKeyColumnNames();
+        String doubleQuotedString = SqlProviderUtils.toDoubleQuotedString(primaryKeyColumns);
+        return FieldSpec.builder(String[].class, TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
+                .initializer("new String[]{$L}", doubleQuotedString)
+                .build();
+    }
+
+    /**
      * 生成列对应的属性.
      *
-     * @param column
-     *         列
+     * @param column 列
      * @return 属性
      */
     private FieldSpec genField(Column column) {
         String columnName = column.name();
-        String fieldName = TableMetaInfoGeneratorUtil.genFieldName(columnName);
+        String fieldName = TableMetaInfoGeneratorUtil.toFieldName(columnName);
         return FieldSpec.builder(ClassName.get(String.class), fieldName, Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
                 .initializer("$S", columnName)
                 .build();
@@ -106,13 +129,12 @@ public class TableMetaInfoGenerator {
     /**
      * 生成列对应的别名属性.
      *
-     * @param column
-     *         列
+     * @param column 列
      * @return 属性
      */
     private FieldSpec genAsField(Column column) {
         String columnName = column.name();
-        String fieldName = TableMetaInfoGeneratorUtil.genAsFieldName(columnName);
+        String fieldName = TableMetaInfoGeneratorUtil.toAsFieldName(columnName);
         String fieldValue = TableMetaInfoGeneratorUtil.getAsFieldValue(columnName);
         return FieldSpec.builder(ClassName.get(String.class), fieldName, Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
                 .initializer("$S", fieldValue)
@@ -122,15 +144,13 @@ public class TableMetaInfoGenerator {
     /**
      * 生成列对应的别名属性,和表名结合.
      *
-     * @param table
-     *         table
-     * @param column
-     *         列
+     * @param table  table
+     * @param column 列
      * @return 属性
      */
     private FieldSpec genAsFieldConcatTableName(Table table, Column column) {
         String columnName = column.name();
-        String fieldName = TableMetaInfoGeneratorUtil.genAsFieldNameConcatTable(columnName);
+        String fieldName = TableMetaInfoGeneratorUtil.toAsFieldNameConcatTable(columnName);
         String fieldValue = TableMetaInfoGeneratorUtil.getAsFieldValueConcatTableName(table.id().table(), columnName);
         return FieldSpec.builder(ClassName.get(String.class), fieldName, Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
                 .initializer("$S", fieldValue)

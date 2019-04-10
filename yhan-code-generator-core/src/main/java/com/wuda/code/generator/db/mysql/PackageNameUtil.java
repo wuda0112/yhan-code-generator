@@ -2,6 +2,7 @@ package com.wuda.code.generator.db.mysql;
 
 import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.relational.Table;
+import com.wuda.yhan.util.commons.StringUtil;
 
 /**
  * 命名工具类.
@@ -20,17 +21,29 @@ class PackageNameUtil {
     static String getPackageName(String userSpecifyPackageName, String schema) {
         String packageName;
         if (schema != null && !schema.isEmpty()) {
-            packageName = userSpecifyPackageName + ".entity." + schema.replace(Constant.word_separator + "", "");
+            packageName = userSpecifyPackageName + ".entity." + dotSeparatedString(schema);
         } else {
             packageName = userSpecifyPackageName + ".entity";
         }
         return packageName;
     }
 
+    private static String dotSeparatedString(String schema) {
+        char dot = '.';
+        String str = schema.toLowerCase().replace(Constant.word_separator, dot);
+        int lastCharIndex = StringUtil.lastCharIndex(str);
+        if (str.charAt(lastCharIndex) == dot) {
+            str = StringUtil.removeLastChar(str);
+        } else if (str.charAt(0) == dot) {
+            str = str.substring(1);
+        }
+        return str;
+    }
+
     /**
-     * schema.table
+     * schema dot table
      *
-     * @param table table
+     * @param table {@link Table}
      * @return schema.table
      */
     static String getSchemaDotTable(Table table) {

@@ -1,54 +1,52 @@
 package com.wuda.code.generator.db.mysql;
 
-import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.MySqlCreateTableStatementParser;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import io.debezium.connector.mysql.MySqlDdlParser;
-import io.debezium.relational.TableId;
-import io.debezium.relational.Tables;
-import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class TableTest {
 
     public List<Table> getTable() {
-        Tables tables = new Tables();
-        String ddl = "CREATE TABLE test.shop ("
-                + " id BIGINT(20) NOT NULL AUTO_INCREMENT,"
-                + " version BIGINT(20) NOT NULL,"
-                + " name VARCHAR(255) NOT NULL,"
-                + " owner VARCHAR(255) NOT NULL,"
-                + " phone_number VARCHAR(255) NOT NULL,"
-                + " primary key (id, name)"
-                + " );";
-        MySqlDdlParser parser = new MySqlDdlParser();
-        parser.parse(ddl, tables);
-        Set<TableId> tableIds = tables.tableIds();
-        List<Table> tableList = new ArrayList<>(tableIds.size());
-        for (TableId tableId : tableIds) {
-            io.debezium.relational.Table actualTable = tables.forTable(tableId);
-            Table table = new Table();
-            table.setActualTable(actualTable);
-            tableList.add(table);
-        }
-        return tableList;
-    }
 
-    @Test
-    public void test() {
-        List<Table> tables = getTable();
-        for (Table table : tables) {
-            List<Column> columns = table.nonPrimaryKeyColumns();
-            printColumn(columns);
-        }
-    }
+        String ddl = "CREATE TABLE `mysql_tester`.`individual_user` ("
+                + "`id` BIGINT(20) UNSIGNED NOT NULL,"
+                + "`username` VARCHAR(45) NOT NULL COMMENT '用户名',"
+                + "`password` VARCHAR(45) NOT NULL COMMENT '密码',"
+                + "`mobile_phone` INT(10) UNSIGNED NOT NULL DEFAULT '0' COMMENT '手机',"
+                + "`email` VARCHAR(45) NOT NULL DEFAULT '' COMMENT '邮箱',"
+                + "`status` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT '状态. \\\\n1 : 正常',"
+                + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                + "`create_user` BIGINT(20) UNSIGNED NOT NULL,"
+                + "`last_modify_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "`last_modify_user` BIGINT(20) UNSIGNED NOT NULL,"
+                + "`is_deleted` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',"
+                + "PRIMARY KEY (`id`),"
+                + "UNIQUE INDEX `idx_mobile_phone` (`mobile_phone`),"
+                + "UNIQUE INDEX `idx_email` (`email`),"
+                + "UNIQUE INDEX `idx_username` (`username`)"
+                + ")"
+                + "COMMENT='个人用户－基本信息'"
+                + "COLLATE='utf8_general_ci'"
+                + "ENGINE=InnoDB;" +
 
-    private void printColumn(List<Column> columns) {
-        columns.forEach(column -> {
-            System.out.println(column.name());
-        });
+                "CREATE TABLE mysql_tester.`shop` ("
+                + "`id` BIGINT(20) UNSIGNED NOT NULL,"
+                + "`user_id` BIGINT(20) UNSIGNED NOT NULL COMMENT '所属用户ID.',"
+                + "`shop_name` VARCHAR(45) NOT NULL COMMENT '店铺名称',"
+                + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                + "`create_user` BIGINT(20) UNSIGNED NOT NULL,"
+                + "`last_modify_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "`last_modify_user` BIGINT(20) UNSIGNED NOT NULL,"
+                + "`is_deleted` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',"
+                + "PRIMARY KEY (`id`),"
+                + "INDEX `fk_user_id_idx` (`user_id`,`shop_name`)"
+                + ")"
+                + "COMMENT='店铺信息'"
+                + "COLLATE='utf8_general_ci'"
+                + "ENGINE=InnoDB;";
+        MySqlCreateTableStatementParser parser = new MySqlCreateTableStatementParser();
+        return parser.parse(ddl);
     }
 
 }

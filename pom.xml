@@ -5,28 +5,46 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.wuda</groupId>
-        <artifactId>project-dependency</artifactId>
-        <version>1.0.1</version>
+        <groupId>io.github.wuda0112</groupId>
+        <artifactId>yhan-spring-boot-based-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
     <packaging>pom</packaging>
     <artifactId>yhan-code-generator</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
 
     <modules>
         <module>yhan-code-generator-core</module>
         <module>yhan-code-generator-lang</module>
+        <module>yhan-code-generator-ddl-parser-mysql</module>
     </modules>
 
+    <scm>
+        <url>https://github.com/wuda0112/yhan-code-generator</url>
+    </scm>
+    <licenses>
+        <license>
+            <name>Apache Software License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>wuda</name>
+            <email>wuda0112@gmail.com</email>
+        </developer>
+    </developers>
+
     <properties>
-        <yhan-base-version>1.0.1</yhan-base-version>
+        <yhan-base-version>1.0.0-SNAPSHOT</yhan-base-version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>com.wuda</groupId>
+            <groupId>io.github.wuda0112</groupId>
             <artifactId>yhan-commons-util</artifactId>
         </dependency>
         <dependency>
@@ -36,10 +54,27 @@
     </dependencies>
 
     <dependencyManagement>
+
         <dependencies>
 
             <dependency>
-                <groupId>com.wuda</groupId>
+                <groupId>io.github.wuda0112</groupId>
+                <artifactId>yhan-code-generator-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wuda0112</groupId>
+                <artifactId>yhan-code-generator-lang</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wuda0112</groupId>
+                <artifactId>yhan-code-generator-ddl-parser-mysql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.wuda0112</groupId>
                 <artifactId>yhan-base</artifactId>
                 <version>${yhan-base-version}</version>
                 <type>pom</type>

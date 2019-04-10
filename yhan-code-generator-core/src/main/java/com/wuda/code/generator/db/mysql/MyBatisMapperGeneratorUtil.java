@@ -3,6 +3,7 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
@@ -11,6 +12,7 @@ import com.wuda.yhan.util.commons.StringUtil;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -26,7 +28,7 @@ class MyBatisMapperGeneratorUtil {
      * @param tableName 表名称
      * @return 类名
      */
-    static String genClassName(String tableName) {
+    static String toClassName(String tableName) {
         String className = JavaNamingUtil.toCamelCase(tableName, Constant.word_separator);
         className = StringUtil.firstCharToUpperCase(className);
         className = StringUtil.addSuffix(className, Constant.MAPPER_CLASS_NAME_SUFFIX);
@@ -88,21 +90,32 @@ class MyBatisMapperGeneratorUtil {
     }
 
     /**
-     * 主键中的字段生成参数.
+     * 主键中的列生成方法的输入参数.
      *
      * @param table                  table
      * @param mybatisParamAnnotation 是否在参数前添加{@link org.apache.ibatis.annotations.Param}注解
-     * @return 主键中可能是多个column
+     * @return 输入参数定义
      */
-    static Iterable<ParameterSpec> genPrimaryKeyParameter(Table table, boolean mybatisParamAnnotation) {
+    static Iterable<ParameterSpec> getPrimaryKeyParameterSpec(Table table, boolean mybatisParamAnnotation) {
         List<Column> primaryKeyColumns = table.primaryKeyColumns();
-        List<ParameterSpec> list = new ArrayList<>(primaryKeyColumns.size());
-        for (Column column : primaryKeyColumns) {
+        return getParameterSpecs(primaryKeyColumns, mybatisParamAnnotation);
+    }
+
+    /**
+     * 用给定的列生成方法的输入参数.
+     *
+     * @param columns                column
+     * @param mybatisParamAnnotation 参数上是否加上{@link Param}注解
+     * @return 输入参数定义
+     */
+    static Iterable<ParameterSpec> getParameterSpecs(List<Column> columns, boolean mybatisParamAnnotation) {
+        List<ParameterSpec> list = new ArrayList<>(columns.size());
+        for (Column column : columns) {
             Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
-            String parameterName = EntityGeneratorUtil.genFieldName(column.name());
+            String parameterName = EntityGeneratorUtil.toFieldName(column.name());
             ParameterSpec.Builder builder = ParameterSpec.builder(type, parameterName);
             if (mybatisParamAnnotation) {
-                builder.addAnnotation(genMybatisParamAnnotion(parameterName));
+                builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
             }
             list.add(builder.build());
         }
@@ -115,7 +128,7 @@ class MyBatisMapperGeneratorUtil {
      * @param parameterName parameter name
      * @return {@link Param}注解
      */
-    static AnnotationSpec genMybatisParamAnnotion(String parameterName) {
+    static AnnotationSpec getMybatisParamAnnotationSpec(String parameterName) {
         return AnnotationSpec.builder(Param.class)
                 .addMember("value", "$S", parameterName)
                 .build();
@@ -127,13 +140,79 @@ class MyBatisMapperGeneratorUtil {
      * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
      * @return ParameterSpec
      */
-    static ParameterSpec genRetrieveColumnsParam(boolean mybatisParamAnnotation) {
-        String parameterName = "columns";
+    static ParameterSpec getRetrieveColumnsParameterSpec(boolean mybatisParamAnnotation) {
+        String parameterName = "retrieveColumns";
         ArrayTypeName arrayTypeName = ArrayTypeName.of(String.class);
         ParameterSpec.Builder builder = ParameterSpec.builder(arrayTypeName, parameterName);
         if (mybatisParamAnnotation) {
-            builder.addAnnotation(genMybatisParamAnnotion(parameterName));
+            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
         }
         return builder.build();
+    }
+
+    /**
+     * 分页参数.
+     *
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
+     * @return ParameterSpec
+     */
+    static Iterable<ParameterSpec> getPagingParameterSpecs(boolean mybatisParamAnnotation) {
+        return Arrays.asList(getPagingOffsetParameterSpec(mybatisParamAnnotation), getPagingRowCountParameterSpec(mybatisParamAnnotation));
+    }
+
+    /**
+     * 分页参数的<i>offset</i>.
+     *
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
+     * @return ParameterSpec
+     */
+    static ParameterSpec getPagingOffsetParameterSpec(boolean mybatisParamAnnotation) {
+        String parameterName = Constant.PAGING_OFFSET;
+        ParameterSpec.Builder builder = ParameterSpec.builder(TypeName.INT, parameterName);
+        if (mybatisParamAnnotation) {
+            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+        }
+        return builder.build();
+    }
+
+    /**
+     * 分页参数的<i>row_count</i>.
+     *
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
+     * @return ParameterSpec
+     */
+    static ParameterSpec getPagingRowCountParameterSpec(boolean mybatisParamAnnotation) {
+        String parameterName = Constant.PAGING_ROW_COUNT;
+        ParameterSpec.Builder builder = ParameterSpec.builder(TypeName.INT, parameterName);
+        if (mybatisParamAnnotation) {
+            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+        }
+        return builder.build();
+    }
+
+    /**
+     * 根据<i>WHERE</i>条件中的列生成方法名.
+     *
+     * @param whereClauseColumns where条件中的所有column
+     * @param primaryKey         这些column是否组成主键
+     * @return 对应的方法名
+     */
+    static String getSelectMethodName(List<String> whereClauseColumns, boolean primaryKey) {
+        if (primaryKey) {
+            return MyBatisMapperGeneratorUtil.getSelectByPrimaryKeyMethodName();
+        }
+        StringBuilder builder = new StringBuilder("selectBy");
+        int last = whereClauseColumns.size() - 1;
+        String column;
+        for (int index = 0; index < whereClauseColumns.size(); index++) {
+            column = whereClauseColumns.get(index);
+            String fieldName = EntityGeneratorUtil.toFieldName(column);
+            fieldName = StringUtil.firstCharToUpperCase(fieldName);
+            builder.append(fieldName);
+            if (index != last) {
+                builder.append("And");
+            }
+        }
+        return builder.toString();
     }
 }

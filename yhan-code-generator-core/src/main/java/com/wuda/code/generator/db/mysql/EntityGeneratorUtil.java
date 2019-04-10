@@ -1,6 +1,7 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
+import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.IsSetField;
@@ -21,7 +22,7 @@ class EntityGeneratorUtil {
      * @param tableName 表名称
      * @return 类名
      */
-    static String genClassName(String tableName) {
+    static String toClassName(String tableName) {
         String className = JavaNamingUtil.toCamelCase(tableName, Constant.word_separator);
         className = StringUtil.firstCharToUpperCase(className);
         return className;
@@ -33,7 +34,7 @@ class EntityGeneratorUtil {
      * @param columnName 列名称
      * @return 属性名称
      */
-    static String genFieldName(String columnName) {
+    static String toFieldName(String columnName) {
         return JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
     }
 
@@ -43,7 +44,7 @@ class EntityGeneratorUtil {
      * @param columnName 列名称
      * @return 属性名称
      */
-    static String genIsSetFieldName(String columnName) {
+    static String toIsSetFieldName(String columnName) {
         String fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
         return StringUtil.addSuffix(fieldName, IsSetField.suffix);
     }
@@ -55,10 +56,10 @@ class EntityGeneratorUtil {
      * @param userSpecifyPackageName package name
      * @return 参数信息
      */
-    static ParameterSpec genEntityParameter(Table table, String userSpecifyPackageName) {
-        String entityName = EntityGeneratorUtil.genClassName(table.id().table());
+    static ParameterSpec getEntityParameter(Table table, String userSpecifyPackageName) {
+        String entityName = EntityGeneratorUtil.toClassName(table.id().table());
         String parameterName = StringUtil.firstCharToLowerCase(entityName);
-        TypeName typeName = genEntityClassName(table, userSpecifyPackageName);
+        TypeName typeName = getTypeName(table, userSpecifyPackageName);
         return ParameterSpec.builder(typeName, parameterName).build();
     }
 
@@ -69,29 +70,41 @@ class EntityGeneratorUtil {
      * @param userSpecifyPackageName package name
      * @return 参数信息
      */
-    static ParameterSpec genEntityListParameter(Table table, String userSpecifyPackageName) {
-        TypeName typeName = genEntityClassName(table, userSpecifyPackageName);
-        ClassName list = ClassName.get("java.util", "List");
-        TypeName listOfEntities = ParameterizedTypeName.get(list, typeName);
+    static ParameterSpec getEntityListParameter(Table table, String userSpecifyPackageName) {
+        ParameterizedTypeName listOfTableEntity = listOfTableEntity(table, userSpecifyPackageName);
         String parameterName = MyBatisMapperGeneratorUtil.getBatchInsertParamName();
         AnnotationSpec paramAnnotationSpec = AnnotationSpec.builder(Param.class)
                 .addMember("value", "$S", parameterName)
                 .build();
-        return ParameterSpec.builder(listOfEntities, parameterName)
+        return ParameterSpec.builder(listOfTableEntity, parameterName)
                 .addAnnotation(paramAnnotationSpec)
                 .build();
     }
 
     /**
-     * ClassName.
+     * {@link ParameterizedTypeName},List的泛型类型是当前表对应的实体.
+     * 比如: Table是User,则返回List<User>.
+     *
+     * @param table                  table
+     * @param userSpecifyPackageName 包名
+     * @return 泛型类型的{@link {@link TypeName}}
+     */
+    static ParameterizedTypeName listOfTableEntity(Table table, String userSpecifyPackageName) {
+        TypeName typeName = getTypeName(table, userSpecifyPackageName);
+        ClassName list = TypeNameUtils.listClassName();
+        return ParameterizedTypeName.get(list, typeName);
+    }
+
+    /**
+     * {@link TypeName}.
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
-     * @return ClassName
+     * @return {@link TypeName}
      */
-    static ClassName genEntityClassName(Table table, String userSpecifyPackageName) {
+    static TypeName getTypeName(Table table, String userSpecifyPackageName) {
         String packageName = PackageNameUtil.getPackageName(userSpecifyPackageName, table.id().schema());
-        String entityClassName = EntityGeneratorUtil.genClassName(table.id().table());
+        String entityClassName = EntityGeneratorUtil.toClassName(table.id().table());
         return ClassName.get(packageName, entityClassName);
     }
 }

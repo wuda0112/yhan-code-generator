@@ -27,7 +27,7 @@ public class EntityGenerator {
      * @return java file
      */
     public JavaFile genJavaFile(Table table, String packageName) {
-        String className = EntityGeneratorUtil.genClassName(table.id().table());
+        String className = EntityGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.addSuperinterface(TypeName.get(TableEntity.class));
@@ -96,7 +96,7 @@ public class EntityGenerator {
     private FieldSpec genField(Column column) {
         String columnName = column.name();
         Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
-        String fieldName = EntityGeneratorUtil.genFieldName(columnName);
+        String fieldName = EntityGeneratorUtil.toFieldName(columnName);
         AnnotationSpec annotationSpec = genColumnAnnotation(column);
         return FieldSpec.builder(type, fieldName, Modifier.PRIVATE)
                 .addAnnotation(annotationSpec)
@@ -112,7 +112,7 @@ public class EntityGenerator {
      */
     private FieldSpec genIsSetField(Column column) {
         String columnName = column.name();
-        String fieldName = EntityGeneratorUtil.genIsSetFieldName(columnName);
+        String fieldName = EntityGeneratorUtil.toIsSetFieldName(columnName);
         return FieldSpec.builder(TypeName.BOOLEAN, fieldName, Modifier.PRIVATE)
                 .addAnnotation(genIsSetFieldAnnotation(columnName))
                 .build();
@@ -125,7 +125,7 @@ public class EntityGenerator {
      * @return {@link IsSetField}
      */
     private AnnotationSpec genIsSetFieldAnnotation(String columnName) {
-        String referenceFieldName = EntityGeneratorUtil.genFieldName(columnName);
+        String referenceFieldName = EntityGeneratorUtil.toFieldName(columnName);
         return AnnotationSpec.builder(IsSetField.class)
                 .addMember("referenceField", "$S", referenceFieldName)
                 .build();
