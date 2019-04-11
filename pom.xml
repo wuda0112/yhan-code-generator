@@ -23,6 +23,8 @@
 
     <scm>
         <url>https://github.com/wuda0112/yhan-code-generator</url>
+        <connection>scm:git:git@github.com:wuda0112/yhan-code-generator.git</connection>
+        <developerConnection>scm:git:git@github.com:wuda0112/yhan-code-generator.git</developerConnection>
     </scm>
     <licenses>
         <license>
