@@ -7,11 +7,19 @@ import java.nio.file.Paths;
 
 public class GeneratorTestBase {
 
+    /**
+     * 指定包名.
+     */
     String packageName = "com.wuda";
+
+    /**
+     * 代码存放位置.
+     */
+    String path="e:/code/";
 
     public void printAndWrite(JavaFile javaFile) {
         try {
-            javaFile.writeTo(Paths.get("e:/code/"));
+            javaFile.writeTo(Paths.get(path));
         } catch (IOException e) {
             e.printStackTrace();
         }
