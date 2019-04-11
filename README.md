@@ -17,65 +17,18 @@ Mysql Mybatis代码生成工具。
 - [TableTest](https://github.com/wuda0112/yhan-code-generator/blob/master/yhan-code-generator-core/src/test/java/com/wuda/code/generator/db/mysql/TableTest.java/)  Create Table DDL解析
 
 
-# 主要解决的问题
-Mybatis　ORM 代码生成工具很多，为什么还要写这个呢？因为，很多生成工具生成
+# 和其他代码生成工具的不同
+Mysql Mybatis ORM 代码生成工具很多，为什么还要写这个呢？因为，很多工具生成
 
-- select方法都是select所有字段，假如一个表有很多字段，或者有文章内容这样的大字段，查询所有字段就不好了
-- 新增和修改也是作用在所有字段，有人会说，新增和修改的时候也有【!=null && !=""】这样的判断，这样就不是所有字段了，但是这样判断对吗？假如表中某个字段就是要update成【null 或者 ""】呢？这个需求很正常！
+- select方法都是select所有字段，假如一个表有很多字段，或者有文章内容这样的大字段，查询所有字段就合适了，说好的sql优化呢，连着最基本的也不管了？
+- 新增和修改也是作用在所有字段上，有人会说，新增和修改的时候也有【!=null && !=""】这样的判断，这样就不是所有字段了，但是这样判断对吗？假如表中某个字段就是要insert 或者 update成【null 或者 ""】呢？这个需求很正常！
 - select方法只有根据主键查询，正常理解，有索引的字段都可以生成对应的查询方法吧？
 - XML真的不方便
 
-# 对应的解决方案
-### 举例用的表和生成的代码在文章后面，可以对照着看
-
-- insert单条记录时，只有【实体中调用过set方法的属性】对应的列才会放到insert语句中，不会把表中所有列都列出来。如果一个实体没有任何字段调用过set方法，则不会执行update语句。举例，假如只有username字段调用过set方法，而nickname字段没有调用过set方法，那么update语句是
-
-```
-insert into my_schema.user_basic (username) values(#{username})
-```
-
-- update记录时，只有【实体中调用过set方法的属性】对应的列才会放到update语句中，不会把表中所有列都列出来。如果一个实体没有任何字段调用过set方法，则不会执行update语句。举例，假如只有username字段调用过set方法，而nickname字段没有调用过set方法，那么update语句是
-
-```
-UPDATE my_schema.user_basic SET username = #{username} WHERE id = #{id}
-```
-
-
-- 所有的select方法，都不会默认去返回所有列，必须指定返回哪些列，举例，【retrieveColumns】用于指定需要返回的列，放心，不用去写很多字符串，直接使用【UserBasicMetaInfo】中的各种常量即可
-
-```
-UserBasic selectByPrimaryKey(@Param("id") Long id,
-                               @Param("retrieveColumns") String[] retrieveColumns);
-```
-
-- 不仅可以根据主键查询，当表中有索引时，也会生成根据索引查询的方法。当索引是唯一索引时，生成的查询方法，返回值是表对应的实体；其他索引时，生成的查询方法则返回实体的集合，并且输入参数有分页参数
-。
-
-比如【username】字段上有唯一索引，则生成的查询方法是，注意返回值和输入参数
-
-```
-@SelectProvider(
-      type = UserBasicSqlBuilder.class,
-      method = "selectByUsername"
-  )
-  UserBasic selectByUsername(@Param("username") String username,
-                             @Param("retrieveColumns") String[] retrieveColumns);
-```
-比如【nickname】字段是有普通索引，则生成的查询方法是，注意返回值和输入参数
-
-```
-@SelectProvider(
-      type = UserBasicSqlBuilder.class,
-      method = "selectByNickname"
-  )
-  List<UserBasic> selectByNickname(@Param("nickname") String nickname, @Param("offset") int offset,
-                                   @Param("rowCount") int rowCount, @Param("retrieveColumns") String[] retrieveColumns);
-```
-
-- 不使用XML文件
-
 # 举例
-如果有如下 Create table DDL
+## Create table DDL
+
+注意username列上有唯一索引，nickname列上有普通索引，可以看下为它们生成的查询方法
 
 ```
 CREATE TABLE `my_schema`.`user_basic` (
@@ -330,3 +283,51 @@ public final class UserBasicSqlBuilder {
   }
 }
 ```
+
+# 特点
+
+- insert单条记录时，只有【实体中调用过set方法的属性】对应的列才会放到insert语句中，不会把表中所有列都列出来。如果一个实体没有任何字段调用过set方法，则不会执行update语句。举例，假如只有username字段调用过set方法，而nickname字段没有调用过set方法，那么update语句是
+
+```
+insert into my_schema.user_basic (username) values(#{username})
+```
+
+- update记录时，只有【实体中调用过set方法的属性】对应的列才会放到update语句中，不会把表中所有列都列出来。如果一个实体没有任何字段调用过set方法，则不会执行update语句。举例，假如只有username字段调用过set方法，而nickname字段没有调用过set方法，那么update语句是
+
+```
+UPDATE my_schema.user_basic SET username = #{username} WHERE id = #{id}
+```
+
+
+- 所有的select方法，都不会默认去返回所有列，必须指定返回哪些列，举例，【retrieveColumns】用于指定需要返回的列，放心，不用去写很多字符串，直接使用【UserBasicMetaInfo】中的各种常量即可
+
+```
+UserBasic selectByPrimaryKey(@Param("id") Long id,
+                               @Param("retrieveColumns") String[] retrieveColumns);
+```
+
+- 不仅可以根据主键查询，当表中有索引时，也会生成根据索引查询的方法。当索引是唯一索引时，生成的查询方法，返回值是表对应的实体；其他索引时，生成的查询方法则返回实体的集合，并且输入参数有分页参数
+。
+
+比如【username】字段上有唯一索引，则生成的查询方法是，注意返回值和输入参数
+
+```
+@SelectProvider(
+      type = UserBasicSqlBuilder.class,
+      method = "selectByUsername"
+  )
+  UserBasic selectByUsername(@Param("username") String username,
+                             @Param("retrieveColumns") String[] retrieveColumns);
+```
+比如【nickname】字段是有普通索引，则生成的查询方法是，注意返回值和输入参数
+
+```
+@SelectProvider(
+      type = UserBasicSqlBuilder.class,
+      method = "selectByNickname"
+  )
+  List<UserBasic> selectByNickname(@Param("nickname") String nickname, @Param("offset") int offset,
+                                   @Param("rowCount") int rowCount, @Param("retrieveColumns") String[] retrieveColumns);
+```
+
+- 不使用XML文件
