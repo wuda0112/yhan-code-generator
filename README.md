@@ -1,8 +1,8 @@
 # 简介
-代码生成工具。
+Mysql Mybatis代码生成工具。
 
 ```
-1. 根据Mysql create table DDL 生成表对应的实体
+1. 根据 Mysql create table DDL 生成表对应的实体，Mybatis Mapper , 表名列名常量，Sql Builder
 2. 生成单个表的insert , batch insert , deleteByPrimaryKey , updateByPrimaryKey ,selectByPrimaryKey , selectByIndex 方法
 ```
 
