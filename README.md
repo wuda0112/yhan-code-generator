@@ -6,6 +6,51 @@ Mysql Mybatis代码生成工具。
 2. 生成单个表的insert , batch insert , deleteByPrimaryKey , updateByPrimaryKey ,selectByPrimaryKey , selectByIndex 方法
 ```
 
+# 使用
+## Create Table DDL 解析
+
+```
+String ddl = "CREATE TABLE `my_schema`.`user_basic` (\n" +
+                "\t`id` INT(10) UNSIGNED NOT NULL,\n" +
+                "\t`username` VARCHAR(50) NULL DEFAULT NULL,\n" +
+                "\t`nickname` VARCHAR(50) NULL DEFAULT NULL,\n" +
+                "\tPRIMARY KEY (`id`),\n" +
+                "\tUNIQUE INDEX `idx_username` (`username`),\n" +
+                "\tINDEX `idx_nickname` (`nickname`)\n" +
+                ")";
+                
+MySqlCreateTableStatementParser parser = new MySqlCreateTableStatementParser();
+List<Table> tables = parser.parse(ddl);
+```
+## 生成实体
+
+```
+EntityGenerator entityGenerator = new EntityGenerator();
+JavaFile javaFile = entityGenerator.genJavaFile(table, packageName);
+javaFile.writeTo(Paths.get(path));
+```
+## 生成表和列的常量
+
+```
+TableMetaInfoGenerator generator = new TableMetaInfoGenerator();
+JavaFile javaFile = generator.genJavaFile(table, packageName);
+javaFile.writeTo(Paths.get(path));
+```
+
+## 生成Mybatis Mapper
+
+```
+MyBatisMapperGenerator myBatisMapperGenerator = new MyBatisMapperGenerator();
+JavaFile javaFile = myBatisMapperGenerator.genJavaFile(table, packageName);
+javaFile.writeTo(Paths.get(path));
+```
+## 生成Sql Builder
+```
+SqlBuilderGenerator generator = new SqlBuilderGenerator();
+JavaFile javaFile = generator.genJavaFile(table, packageName);
+javaFile.writeTo(Paths.get(path));
+```
+
 # 快速体验
 有完整的Test代码
 
