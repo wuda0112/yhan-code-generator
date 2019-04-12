@@ -7,6 +7,27 @@ Mysql Mybatis代码生成工具。
 ```
 
 # 使用
+
+```
+<dependency>
+  <groupId>io.github.wuda0112</groupId>
+  <artifactId>yhan-code-generator-core</artifactId>
+  <version>VERSION</version>
+</dependency>
+
+<dependency>
+  <groupId>io.github.wuda0112</groupId>
+  <artifactId>yhan-code-generator-ddl-parser-mysql</artifactId>
+  <version>VERSION</version>
+</dependency>
+
+<dependency>
+  <groupId>io.github.wuda0112</groupId>
+  <artifactId>yhan-code-generator-lang</artifactId>
+  <version>VERSION</version>
+</dependency>
+```
+
 ## Create Table DDL 解析
 
 ```
