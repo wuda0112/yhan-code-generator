@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>io.github.wuda0112</groupId>
         <artifactId>yhan-spring-boot-based-parent</artifactId>
         <version>1.0.2</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <packaging>pom</packaging>
     <artifactId>yhan-code-generator</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <modules>
         <module>yhan-code-generator-core</module>
@@ -25,7 +23,8 @@
         <url>https://github.com/wuda0112/yhan-code-generator</url>
         <connection>scm:git:git@github.com:wuda0112/yhan-code-generator.git</connection>
         <developerConnection>scm:git:git@github.com:wuda0112/yhan-code-generator.git</developerConnection>
-    </scm>
+      <tag>release-1.0.0</tag>
+  </scm>
     <licenses>
         <license>
             <name>Apache Software License 2.0</name>
