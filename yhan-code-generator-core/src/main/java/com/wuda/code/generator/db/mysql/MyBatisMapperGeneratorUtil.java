@@ -202,17 +202,33 @@ class MyBatisMapperGeneratorUtil {
             return MyBatisMapperGeneratorUtil.getSelectByPrimaryKeyMethodName();
         }
         StringBuilder builder = new StringBuilder("selectBy");
+        andSeparated(whereClauseColumns, builder);
+        return builder.toString();
+    }
+
+    /**
+     * 根据<i>WHERE</i>条件中的列生成方法名.
+     *
+     * @param whereClauseColumns where条件中的所有column
+     * @return 对应的方法名
+     */
+    static String getSelectCountMethodName(List<String> whereClauseColumns) {
+        StringBuilder builder = new StringBuilder("countBy");
+        andSeparated(whereClauseColumns, builder);
+        return builder.toString();
+    }
+
+    private static void andSeparated(List<String> whereClauseColumns, StringBuilder appender) {
         int last = whereClauseColumns.size() - 1;
         String column;
         for (int index = 0; index < whereClauseColumns.size(); index++) {
             column = whereClauseColumns.get(index);
             String fieldName = EntityGeneratorUtil.toFieldName(column);
             fieldName = StringUtil.firstCharToUpperCase(fieldName);
-            builder.append(fieldName);
+            appender.append(fieldName);
             if (index != last) {
-                builder.append("And");
+                appender.append("And");
             }
         }
-        return builder.toString();
     }
 }

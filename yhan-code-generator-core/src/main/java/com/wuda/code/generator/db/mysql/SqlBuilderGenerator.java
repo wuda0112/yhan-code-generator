@@ -2,6 +2,7 @@ package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.TypeNameUtils;
+import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.TableEntity;
 import com.wuda.yhan.code.generator.lang.TableEntityUtils;
@@ -280,6 +281,59 @@ public class SqlBuilderGenerator {
     }
 
     /**
+     * 给定Table和Where条件字段,生成此表上相应的<code>SELECT COUNT</code>方法.
+     * 这里没有强制要求给定的列必须有索引,
+     * 所以可以生成此表上任何列的查询方法,
+     * 不过最好还是在有索引的列上生成查询方法.
+     *
+     * @param table                  table
+     * @param whereClauseColumns     sql查询语句中where条件的列
+     * @param userSpecifyPackageName 用户指定的包名称
+     * @return 查询方法
+     */
+    private MethodSpec genSelectCountMethod(Table table, List<Column> whereClauseColumns, String userSpecifyPackageName) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getSelectCountMethodName(columnNames);
+
+        Iterable<ParameterSpec> whereClauseParameterSpecs = MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true);
+
+        TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+        String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
+
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(String.class)
+                .addParameters(whereClauseParameterSpecs);
+        builder.addStatement("$T sql = new $T()", SQL.class, SQL.class)
+                .addStatement("sql.SELECT($T.COUNT_STATEMENT)", Constant.class)
+                .addStatement("sql.FROM($T.$L)", tableMetaInfo, schemaDotTable);
+        String whereClauseColumnQuotingString = SqlProviderUtils.toDoubleQuotedString(columnNames);
+        builder.addStatement("$T.whereConditions(sql, $L)", SqlProviderUtils.class, whereClauseColumnQuotingString);
+        builder.addStatement("$T builder = new $T()", StringBuilder.class, StringBuilder.class)
+                .addStatement("sql.usingAppender(builder)");
+        builder.addStatement("return builder.toString()");
+        return builder.build();
+    }
+
+    /**
+     * 为{@link #genSelectCountMethod(Table, List, String)}提供方法体模板.
+     *
+     * @param schemaDotTable     schema.table
+     * @param whereClauseColumns where条件中的columns
+     * @return sql
+     */
+    @SuppressWarnings("unused")
+    private String selectCountMethodStatementTemplate(String schemaDotTable, String[] whereClauseColumns) {
+        SQL sql = new SQL();
+        sql.SELECT(Constant.COUNT_STATEMENT);
+        sql.FROM(schemaDotTable);
+        SqlProviderUtils.whereConditions(sql, whereClauseColumns);
+        StringBuilder builder = new StringBuilder();
+        sql.usingAppender(builder);
+        return builder.toString();
+    }
+
+    /**
      * 根据表中定义的索引(不包含主键)生成对应的满足索引的查询方法.
      * 每个索引对应一个查询的方法.
      * <p>
@@ -319,6 +373,10 @@ public class SqlBuilderGenerator {
             List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
             MethodSpec methodSpec = genSelectMethod(table, indexColumns, false, index.getType() == Index.Type.UNIQUE, userSpecifyPackageName);
             methods.add(methodSpec);
+            if (index.getType() != Index.Type.UNIQUE) {
+                MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);
+                methods.add(selectCountMethodSpec);
+            }
         }
         return methods;
     }

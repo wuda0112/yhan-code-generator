@@ -244,12 +244,16 @@ public class MyBatisMapperGenerator {
             List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
             MethodSpec methodSpec = genSelectMethod(table, indexColumns, false, index.getType() == Index.Type.UNIQUE, userSpecifyPackageName);
             methods.add(methodSpec);
+            if (index.getType() != Index.Type.UNIQUE) {
+                MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);
+                methods.add(selectCountMethodSpec);
+            }
         }
         return methods;
     }
 
     /**
-     * 具体查看{@link SqlBuilderGenerator#genSelectMethod(Table, List, boolean, String)}方法的定义.
+     * 具体查看{@link SqlBuilderGenerator#genSelectMethod(Table, List, boolean, boolean, String)}方法的定义.
      *
      * @param table                  table
      * @param whereClauseColumns     where clause columns
@@ -257,7 +261,7 @@ public class MyBatisMapperGenerator {
      * @param uniqueIndex            is unique index
      * @param userSpecifyPackageName user specify package name
      * @return {@link MethodSpec}
-     * @see SqlBuilderGenerator#genSelectMethod(Table, List, boolean, String)
+     * @see SqlBuilderGenerator#genSelectMethod(Table, List, boolean, boolean, String)
      */
     private MethodSpec genSelectMethod(Table table, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, String userSpecifyPackageName) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
@@ -296,5 +300,26 @@ public class MyBatisMapperGenerator {
                 .addMember("type", "$T.class", sqlBuilder)
                 .addMember("method", "$S", method)
                 .build();
+    }
+
+    /**
+     * 生成<code>SELECT COUNT</code>方法,用于获取总数.
+     *
+     * @param table                  table
+     * @param whereClauseColumns     where clause columns
+     * @param userSpecifyPackageName user specify package name
+     * @return {@link MethodSpec}
+     */
+    private MethodSpec genSelectCountMethod(Table table, List<Column> whereClauseColumns, String userSpecifyPackageName) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getSelectCountMethodName(columnNames);
+        TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
+        AnnotationSpec sqlBuilderAnnotation = selectMethodAnnotation(sqlBuilderType, methodName);
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addAnnotation(sqlBuilderAnnotation)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .returns(Integer.TYPE)
+                .addParameters(MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true));
+        return builder.build();
     }
 }
