@@ -41,7 +41,7 @@ class SqlBuilderGeneratorUtil {
      */
     static TypeName getSqlBuilderTypeName(Table table, String userSpecifyPackageName) {
         String className = SqlBuilderGeneratorUtil.toClassName(table.id().table());
-        String finalPackageName = PackageNameUtil.getPackageName(userSpecifyPackageName, table.id().schema());
+        String finalPackageName = PackageNameUtil.getMapperPackageName(userSpecifyPackageName, table.id().schema());
         return ClassName.get(finalPackageName, className);
     }
 

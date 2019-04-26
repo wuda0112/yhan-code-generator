@@ -43,7 +43,7 @@ public class SqlBuilderGenerator {
         if (selectByIndexMethods != null) {
             classBuilder.addMethods(selectByIndexMethods);
         }
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
+        String finalPackageName = PackageNameUtil.getMapperPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 

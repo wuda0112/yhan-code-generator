@@ -38,7 +38,7 @@ public class EntityGenerator {
             classBuilder.addFields(fieldSpecs);
             classBuilder.addMethods(genGetterAndSetter(fieldSpecs));
         }
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
+        String finalPackageName = PackageNameUtil.getEntityPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 

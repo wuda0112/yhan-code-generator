@@ -38,7 +38,7 @@ public class TableMetaInfoGenerator {
         if (fieldSpecs != null) {
             classBuilder.addFields(fieldSpecs);
         }
-        String finalPackageName = PackageNameUtil.getPackageName(packageName, table.id().schema());
+        String finalPackageName = PackageNameUtil.getEntityPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 

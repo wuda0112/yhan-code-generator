@@ -12,18 +12,35 @@ import com.wuda.yhan.util.commons.StringUtil;
 class PackageNameUtil {
 
     /**
-     * 生成包名.
+     * 生成entity的包名.
      *
      * @param userSpecifyPackageName 用户指定的包名称
      * @param schema                 mysql schema
      * @return 两个相结合以后生成的包名
      */
-    static String getPackageName(String userSpecifyPackageName, String schema) {
+    static String getEntityPackageName(String userSpecifyPackageName, String schema) {
         String packageName;
         if (schema != null && !schema.isEmpty()) {
             packageName = userSpecifyPackageName + ".entity." + dotSeparatedString(schema);
         } else {
             packageName = userSpecifyPackageName + ".entity";
+        }
+        return packageName;
+    }
+
+    /**
+     * 生成mapper的包名.
+     *
+     * @param userSpecifyPackageName 用户指定的包名称
+     * @param schema                 mysql schema
+     * @return 两个相结合以后生成的包名
+     */
+    static String getMapperPackageName(String userSpecifyPackageName, String schema) {
+        String packageName;
+        if (schema != null && !schema.isEmpty()) {
+            packageName = userSpecifyPackageName + ".mapper." + dotSeparatedString(schema);
+        } else {
+            packageName = userSpecifyPackageName + ".mapper";
         }
         return packageName;
     }

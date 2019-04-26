@@ -49,7 +49,7 @@ class TableMetaInfoGeneratorUtil {
      */
     static TypeName getTypeName(Table table, String userSpecifyPackageName) {
         String className = toClassName(table.id().table());
-        String packageName = PackageNameUtil.getPackageName(userSpecifyPackageName, table.id().schema());
+        String packageName = PackageNameUtil.getEntityPackageName(userSpecifyPackageName, table.id().schema());
         return ClassName.get(packageName, className);
     }
 

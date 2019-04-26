@@ -103,7 +103,7 @@ class EntityGeneratorUtil {
      * @return {@link TypeName}
      */
     static TypeName getTypeName(Table table, String userSpecifyPackageName) {
-        String packageName = PackageNameUtil.getPackageName(userSpecifyPackageName, table.id().schema());
+        String packageName = PackageNameUtil.getEntityPackageName(userSpecifyPackageName, table.id().schema());
         String entityClassName = EntityGeneratorUtil.toClassName(table.id().table());
         return ClassName.get(packageName, entityClassName);
     }
