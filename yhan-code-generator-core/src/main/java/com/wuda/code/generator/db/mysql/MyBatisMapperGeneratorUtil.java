@@ -1,6 +1,5 @@
 package com.wuda.code.generator.db.mysql;
 
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
@@ -14,6 +13,8 @@ import org.apache.ibatis.annotations.Param;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static com.wuda.code.generator.db.mysql.MybatisFrameworkUtils.getMybatisParamAnnotationSpec;
 
 /**
  * {@link MyBatisMapperGenerator}生成代码时,命名工具类.
@@ -123,18 +124,6 @@ class MyBatisMapperGeneratorUtil {
     }
 
     /**
-     * 生成{@link Param}注解.
-     *
-     * @param parameterName parameter name
-     * @return {@link Param}注解
-     */
-    static AnnotationSpec getMybatisParamAnnotationSpec(String parameterName) {
-        return AnnotationSpec.builder(Param.class)
-                .addMember("value", "$S", parameterName)
-                .build();
-    }
-
-    /**
      * select方法的返回列参数.
      *
      * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
@@ -145,7 +134,7 @@ class MyBatisMapperGeneratorUtil {
         ArrayTypeName arrayTypeName = ArrayTypeName.of(String.class);
         ParameterSpec.Builder builder = ParameterSpec.builder(arrayTypeName, parameterName);
         if (mybatisParamAnnotation) {
-            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+            builder.addAnnotation(MybatisFrameworkUtils.getMybatisParamAnnotationSpec(parameterName));
         }
         return builder.build();
     }
