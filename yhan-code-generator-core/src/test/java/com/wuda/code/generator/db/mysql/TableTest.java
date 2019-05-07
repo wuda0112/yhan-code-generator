@@ -13,10 +13,16 @@ public class TableTest {
                 "\t`id` INT(10) UNSIGNED NOT NULL,\n" +
                 "\t`username` VARCHAR(50) NULL DEFAULT NULL,\n" +
                 "\t`nickname` VARCHAR(50) NULL DEFAULT NULL,\n" +
+                "\t`phone` VARCHAR(45) NULL DEFAULT NULL,\n" +
+                "\t`is_deleted` TINYINT(4) NOT NULL DEFAULT '0',\n" +
                 "\tPRIMARY KEY (`id`),\n" +
                 "\tUNIQUE INDEX `idx_username` (`username`),\n" +
+                "\tUNIQUE INDEX `idx_phone_is_deleted` (`phone`, `is_deleted`),\n" +
                 "\tINDEX `idx_nickname` (`nickname`)\n" +
-                ")";
+                ")\n" +
+                "COLLATE='utf8_general_ci'\n" +
+                "ENGINE=InnoDB\n" +
+                ";";
         MySqlCreateTableStatementParser parser = new MySqlCreateTableStatementParser();
         return parser.parse(ddl);
     }

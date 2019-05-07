@@ -2,7 +2,9 @@ package com.wuda.code.generator;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link ClassName}工具类.
@@ -11,21 +13,21 @@ import com.squareup.javapoet.TypeName;
  */
 public class TypeNameUtils {
 
-    public static TypeName stringTypeName() {
-        return ClassName.get("java.lang", "String");
-    }
-
     public static ClassName mapClassName() {
-        return ClassName.get("java.util", "Map");
+        return ClassName.get(Map.class);
     }
 
     public static ClassName listClassName() {
-        return ClassName.get("java.util", "List");
+        return ClassName.get(List.class);
     }
 
-    public static ParameterizedTypeName mapOfString() {
-        TypeName string = TypeNameUtils.stringTypeName();
+    public static ParameterizedTypeName mapOf(Class keyClazz, Class valueClazz) {
         ClassName map = TypeNameUtils.mapClassName();
-        return ParameterizedTypeName.get(map, string, string);
+        return ParameterizedTypeName.get(map, ClassName.get(keyClazz), ClassName.get(valueClazz));
+    }
+
+    public static ParameterizedTypeName listOf(Class clazz) {
+        ClassName listClassName = listClassName();
+        return ParameterizedTypeName.get(listClassName, ClassName.get(clazz));
     }
 }

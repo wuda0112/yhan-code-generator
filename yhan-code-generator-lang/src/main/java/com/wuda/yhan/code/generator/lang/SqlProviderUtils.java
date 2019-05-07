@@ -37,15 +37,19 @@ public class SqlProviderUtils {
     /**
      * sql update语法中<i>SET</i>内容.
      *
-     * @param sql           {@link SQL}
-     * @param fieldToColumn key是属性名称,value是属性对应的数据库表的列名
+     * @param sql                  {@link SQL}
+     * @param fieldToColumn        key是属性名称,value是属性对应的数据库表的列名
+     * @param exclusiveWhereClause 排除更新条件.比如根据主键更新时,主键字段也设置了值,但是主键是作为条件,而不是更新字段,必须排除
      */
-    public static void updateSetColumnsAndValues(SQL sql, Map<String, String> fieldToColumn) {
+    public static void updateSetColumnsAndValues(SQL sql, Map<String, String> fieldToColumn, String... exclusiveWhereClause) {
         Set<Map.Entry<String, String>> entrySet = fieldToColumn.entrySet();
         String column;
         String field;
         for (Map.Entry<String, String> entry : entrySet) {
             column = entry.getValue();
+            if (contains(exclusiveWhereClause, column)) {
+                continue;
+            }
             field = entry.getKey();
             sql.SET(column + "=#{" + field + "}");
         }
@@ -61,20 +65,6 @@ public class SqlProviderUtils {
         if (setterCalledFieldToColumnMap == null || setterCalledFieldToColumnMap.size() == 0) {
             throw new RuntimeException("没有属性调用过set方法! Class Name:" + entity.getClass().getName());
         }
-    }
-
-    /**
-     * sql update语句中的set内容,排除掉不需要更新的列.
-     *
-     * @param fieldToColumn    key是属性名称,value是属性对应的数据库表的列名
-     * @param exclusiveColumns 排除掉不更新的字段,比如根据主键更新时,主键字段也设置了值,但是主键是作为条件,而不是更新字段,必须排除
-     */
-    public static void exclusiveUpdateColumns(Map<String, String> fieldToColumn, String... exclusiveColumns) {
-        fieldToColumn.forEach((field, column) -> {
-            if (contains(exclusiveColumns, column)) {
-                fieldToColumn.remove(field, column);
-            }
-        });
     }
 
     /**
@@ -127,6 +117,55 @@ public class SqlProviderUtils {
             fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
             sql.WHERE(columnName + "=#{" + fieldName + "}");
         }
+    }
+
+    /**
+     * 动态组织sql 语法中的<i>WHERE</i>条件部分,类似Mybatis的foreach.
+     *
+     * @param sql          {@link SQL}
+     * @param whereClauses where条件中的字段
+     */
+    public static void whereConditionsForeach(SQL sql, String collectionName, int collectionSize, String... whereClauses) {
+        String columnName;
+        StringBuilder stringBuilder = new StringBuilder();
+        if (whereClauses.length == 1) {
+            columnName = whereClauses[0];
+            stringBuilder.append(columnName);
+            stringBuilder.append(" IN (");
+            for (int index = 0; index < collectionSize; index++) {
+                stringBuilder.append("#{");
+                stringBuilder.append(collectionName);
+                stringBuilder.append("[").append(index).append("]");
+                stringBuilder.append("}");
+                if (index != collectionSize - 1) {
+                    stringBuilder.append(",");
+                }
+            }
+            stringBuilder.append(" )");
+        } else {
+            String fieldName;
+            for (int index = 0; index < collectionSize; index++) {
+                stringBuilder.append("(");
+                for (int k = 0; k < whereClauses.length; k++) {
+                    columnName = whereClauses[k];
+                    fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+                    stringBuilder.append(columnName).append("=")
+                            .append("#{")
+                            .append(collectionName)
+                            .append("[").append(index).append("].")
+                            .append(fieldName)
+                            .append("}");
+                    if (k != whereClauses.length - 1) {
+                        stringBuilder.append(" AND ");
+                    }
+                }
+                stringBuilder.append(")");
+                if (index != collectionSize - 1) {
+                    stringBuilder.append(" OR ");
+                }
+            }
+        }
+        sql.WHERE(stringBuilder.toString());
     }
 
     /**

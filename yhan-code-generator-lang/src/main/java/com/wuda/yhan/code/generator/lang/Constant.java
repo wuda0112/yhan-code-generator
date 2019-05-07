@@ -32,6 +32,12 @@ public class Constant {
      * mapper中selectByPrimaryKey方法的名称.
      */
     public final static String MAPPER_SELECT_BY_PRIMARY_KEY = "selectByPrimaryKey";
+
+    /**
+     * mapper中batchSelectByPrimaryKey方法的名称.
+     */
+    public final static String MAPPER_BATCH_SELECT_BY_PRIMARY_KEY = "batchSelectByPrimaryKey";
+
     /**
      * mapper类名称的后缀.
      */
@@ -48,5 +54,25 @@ public class Constant {
      * SQL 语句中的select count.
      */
     public final static String COUNT_STATEMENT = "COUNT(*)";
+
+    /**
+     * selectBy前缀.
+     */
+    public final static String SELECT_BY_PREFIX = "selectBy";
+
+    /**
+     * batchSelectBy前缀.
+     */
+    public final static String BATCH_SELECT_BY_PREFIX = "batchSelectBy";
+
+    /**
+     * countBy前缀.
+     */
+    public final static String COUNT_BY_PREFIX = "countBy";
+
+    /**
+     * retrieveColumns.
+     */
+    public final static String RETRIEVE_COLUMNS="retrieveColumns";
 
 }

@@ -35,6 +35,7 @@ public class MyBatisMapperGenerator {
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName));
+        classBuilder.addMethod(genBatchSelectMethod(table, table.primaryKeyColumns(), true, packageName));
         Iterable<MethodSpec> selectByIndexMethods = genSelectByIndexMethod(table, packageName);
         if (selectByIndexMethods != null) {
             classBuilder.addMethods(selectByIndexMethods);
@@ -247,6 +248,9 @@ public class MyBatisMapperGenerator {
             if (index.getType() != Index.Type.UNIQUE) {
                 MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);
                 methods.add(selectCountMethodSpec);
+            } else {
+                MethodSpec batchSelectMethod = genBatchSelectMethod(table, indexColumns, false, userSpecifyPackageName);
+                methods.add(batchSelectMethod);
             }
         }
         return methods;
@@ -304,6 +308,7 @@ public class MyBatisMapperGenerator {
 
     /**
      * 生成<code>SELECT COUNT</code>方法,用于获取总数.
+     * 具体查看{@link SqlBuilderGenerator#genSelectCountMethod(Table, List, String)}方法的定义.
      *
      * @param table                  table
      * @param whereClauseColumns     where clause columns
@@ -320,6 +325,33 @@ public class MyBatisMapperGenerator {
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(Integer.TYPE)
                 .addParameters(MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true));
+        return builder.build();
+    }
+
+    /**
+     * 生成批量查询方法.
+     * 具体查看{@link SqlBuilderGenerator#genBatchSelectMethod(Table, List, boolean, String)}方法的定义.
+     *
+     * @param table                  table
+     * @param whereClauseColumns     where clause columns
+     * @param primaryKey             是否主键
+     * @param userSpecifyPackageName user specify package name
+     * @return 方法定义
+     */
+    private MethodSpec genBatchSelectMethod(Table table, List<Column> whereClauseColumns, boolean primaryKey, String userSpecifyPackageName) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getBatchSelectMethodName(columnNames, primaryKey);
+        TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
+        AnnotationSpec sqlBuilderAnnotation = selectMethodAnnotation(sqlBuilderType, methodName);
+        ParameterizedTypeName returns = EntityGeneratorUtil.listOfTableEntity(table, userSpecifyPackageName);
+        ParameterSpec parameterSpec = MyBatisMapperGeneratorUtil.getBatchSelectParameterSpec(whereClauseColumns, true, table, userSpecifyPackageName);
+        ParameterSpec retrieveColumns = MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true);
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addAnnotation(sqlBuilderAnnotation)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .returns(returns)
+                .addParameter(parameterSpec)
+                .addParameter(retrieveColumns);
         return builder.build();
     }
 }

@@ -2,7 +2,9 @@ package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
@@ -91,6 +93,15 @@ class MyBatisMapperGeneratorUtil {
     }
 
     /**
+     * 获取batch select方法的名称.
+     *
+     * @return select method name
+     */
+    static String getBatchSelectByPrimaryKeyMethodName() {
+        return Constant.MAPPER_BATCH_SELECT_BY_PRIMARY_KEY;
+    }
+
+    /**
      * 主键中的列生成方法的输入参数.
      *
      * @param table                  table
@@ -124,13 +135,37 @@ class MyBatisMapperGeneratorUtil {
     }
 
     /**
+     * 适用batch select方法的输入参数.
+     *
+     * @param columns                column
+     * @param mybatisParamAnnotation 参数上是否加上{@link Param}注解
+     * @return 输入参数定义
+     */
+    static ParameterSpec getBatchSelectParameterSpec(List<Column> columns, boolean mybatisParamAnnotation, Table table, String userSpecifyPackageName) {
+        String parameterName = getBatchInsertParamName();
+        ParameterizedTypeName parameterizedTypeName;
+        if (columns.size() == 1) {
+            Column column = columns.get(0);
+            Class<?> dataType = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
+            parameterizedTypeName = TypeNameUtils.listOf(dataType);
+        } else {
+            parameterizedTypeName = EntityGeneratorUtil.listOfTableEntity(table, userSpecifyPackageName);
+        }
+        ParameterSpec.Builder builder = ParameterSpec.builder(parameterizedTypeName, parameterName);
+        if (mybatisParamAnnotation) {
+            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+        }
+        return builder.build();
+    }
+
+    /**
      * select方法的返回列参数.
      *
      * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
      * @return ParameterSpec
      */
     static ParameterSpec getRetrieveColumnsParameterSpec(boolean mybatisParamAnnotation) {
-        String parameterName = "retrieveColumns";
+        String parameterName = Constant.RETRIEVE_COLUMNS;
         ArrayTypeName arrayTypeName = ArrayTypeName.of(String.class);
         ParameterSpec.Builder builder = ParameterSpec.builder(arrayTypeName, parameterName);
         if (mybatisParamAnnotation) {
@@ -190,7 +225,23 @@ class MyBatisMapperGeneratorUtil {
         if (primaryKey) {
             return MyBatisMapperGeneratorUtil.getSelectByPrimaryKeyMethodName();
         }
-        StringBuilder builder = new StringBuilder("selectBy");
+        StringBuilder builder = new StringBuilder(Constant.SELECT_BY_PREFIX);
+        andSeparated(whereClauseColumns, builder);
+        return builder.toString();
+    }
+
+    /**
+     * 根据<i>WHERE</i>条件中的列生成方法名.
+     *
+     * @param whereClauseColumns where条件中的所有column
+     * @param primaryKey         这些column是否组成主键
+     * @return 对应的方法名
+     */
+    static String getBatchSelectMethodName(List<String> whereClauseColumns, boolean primaryKey) {
+        if (primaryKey) {
+            return MyBatisMapperGeneratorUtil.getBatchSelectByPrimaryKeyMethodName();
+        }
+        StringBuilder builder = new StringBuilder(Constant.BATCH_SELECT_BY_PREFIX);
         andSeparated(whereClauseColumns, builder);
         return builder.toString();
     }
@@ -202,7 +253,7 @@ class MyBatisMapperGeneratorUtil {
      * @return 对应的方法名
      */
     static String getSelectCountMethodName(List<String> whereClauseColumns) {
-        StringBuilder builder = new StringBuilder("countBy");
+        StringBuilder builder = new StringBuilder(Constant.COUNT_BY_PREFIX);
         andSeparated(whereClauseColumns, builder);
         return builder.toString();
     }
