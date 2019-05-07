@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.wuda.code.generator.db.mysql.MybatisFrameworkUtils.getMybatisParamAnnotationSpec;
+import static com.wuda.code.generator.db.mysql.MybatisFrameworkUtils.getParamAnnotationSpec;
 
 /**
  * {@link MyBatisMapperGenerator}生成代码时,命名工具类.
@@ -127,7 +127,7 @@ class MyBatisMapperGeneratorUtil {
             String parameterName = EntityGeneratorUtil.toFieldName(column.name());
             ParameterSpec.Builder builder = ParameterSpec.builder(type, parameterName);
             if (mybatisParamAnnotation) {
-                builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+                builder.addAnnotation(getParamAnnotationSpec(parameterName));
             }
             list.add(builder.build());
         }
@@ -153,7 +153,7 @@ class MyBatisMapperGeneratorUtil {
         }
         ParameterSpec.Builder builder = ParameterSpec.builder(parameterizedTypeName, parameterName);
         if (mybatisParamAnnotation) {
-            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+            builder.addAnnotation(getParamAnnotationSpec(parameterName));
         }
         return builder.build();
     }
@@ -169,7 +169,7 @@ class MyBatisMapperGeneratorUtil {
         ArrayTypeName arrayTypeName = ArrayTypeName.of(String.class);
         ParameterSpec.Builder builder = ParameterSpec.builder(arrayTypeName, parameterName);
         if (mybatisParamAnnotation) {
-            builder.addAnnotation(MybatisFrameworkUtils.getMybatisParamAnnotationSpec(parameterName));
+            builder.addAnnotation(MybatisFrameworkUtils.getParamAnnotationSpec(parameterName));
         }
         return builder.build();
     }
@@ -194,7 +194,7 @@ class MyBatisMapperGeneratorUtil {
         String parameterName = Constant.PAGING_OFFSET;
         ParameterSpec.Builder builder = ParameterSpec.builder(TypeName.INT, parameterName);
         if (mybatisParamAnnotation) {
-            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+            builder.addAnnotation(getParamAnnotationSpec(parameterName));
         }
         return builder.build();
     }
@@ -209,7 +209,7 @@ class MyBatisMapperGeneratorUtil {
         String parameterName = Constant.PAGING_ROW_COUNT;
         ParameterSpec.Builder builder = ParameterSpec.builder(TypeName.INT, parameterName);
         if (mybatisParamAnnotation) {
-            builder.addAnnotation(getMybatisParamAnnotationSpec(parameterName));
+            builder.addAnnotation(getParamAnnotationSpec(parameterName));
         }
         return builder.build();
     }

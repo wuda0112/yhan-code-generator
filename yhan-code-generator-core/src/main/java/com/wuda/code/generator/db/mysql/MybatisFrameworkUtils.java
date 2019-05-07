@@ -1,7 +1,8 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.AnnotationSpec;
-import org.apache.ibatis.annotations.Param;
+import com.squareup.javapoet.TypeName;
+import org.apache.ibatis.annotations.*;
 
 /**
  * Mybatis framework utils.
@@ -11,14 +12,91 @@ import org.apache.ibatis.annotations.Param;
 class MybatisFrameworkUtils {
 
     /**
+     * {@link Mapper}注解
+     *
+     * @return {@link Mapper}注解
+     */
+    static AnnotationSpec genMapperAnnotation() {
+        return AnnotationSpec.builder(Mapper.class).build();
+    }
+
+    /**
      * 生成{@link Param}注解.
      *
      * @param parameterName parameter name
      * @return {@link Param}注解
      */
-    static AnnotationSpec getMybatisParamAnnotationSpec(String parameterName) {
+    static AnnotationSpec getParamAnnotationSpec(String parameterName) {
         return AnnotationSpec.builder(Param.class)
                 .addMember("value", "$S", parameterName)
+                .build();
+    }
+
+    /**
+     * {@link InsertProvider}注解.
+     *
+     * @param sqlBuilderTypeName 提供sql语句的类
+     * @param methodName         提供sql语句的方法
+     * @return 注解
+     */
+    static AnnotationSpec getInsertProviderAnnotationSpec(TypeName sqlBuilderTypeName, String methodName) {
+        return AnnotationSpec.builder(InsertProvider.class)
+                .addMember("type", "$T.class", sqlBuilderTypeName)
+                .addMember("method", "$S", methodName)
+                .build();
+    }
+
+    /**
+     * {@link DeleteProvider}注解.
+     *
+     * @param sqlBuilderTypeName 提供sql语句的类
+     * @param methodName         提供sql语句的方法
+     * @return 注解
+     */
+    static AnnotationSpec getDeleteProviderAnnotationSpec(TypeName sqlBuilderTypeName, String methodName) {
+        return AnnotationSpec.builder(DeleteProvider.class)
+                .addMember("type", "$T.class", sqlBuilderTypeName)
+                .addMember("method", "$S", methodName)
+                .build();
+    }
+
+    /**
+     * {@link UpdateProvider}注解.
+     *
+     * @param sqlBuilderTypeName 提供sql语句的类
+     * @param methodName         提供sql语句的方法
+     * @return 注解
+     */
+    static AnnotationSpec getUpdateProviderAnnotationSpec(TypeName sqlBuilderTypeName, String methodName) {
+        return AnnotationSpec.builder(UpdateProvider.class)
+                .addMember("type", "$T.class", sqlBuilderTypeName)
+                .addMember("method", "$S", methodName)
+                .build();
+    }
+
+    /**
+     * {@link SelectProvider}注解.
+     *
+     * @param sqlBuilderTypeName 提供sql语句的类
+     * @param methodName         提供sql语句的方法
+     * @return 注解
+     */
+    static AnnotationSpec getSelectProviderAnnotationSpec(TypeName sqlBuilderTypeName, String methodName) {
+        return AnnotationSpec.builder(SelectProvider.class)
+                .addMember("type", "$T.class", sqlBuilderTypeName)
+                .addMember("method", "$S", methodName)
+                .build();
+    }
+
+    /**
+     * {@link Insert}注解.
+     *
+     * @param value value
+     * @return 注解
+     */
+    static AnnotationSpec getInsertAnnotationSpec(String value) {
+        return AnnotationSpec.builder(Insert.class)
+                .addMember("value", "$S", value)
                 .build();
     }
 

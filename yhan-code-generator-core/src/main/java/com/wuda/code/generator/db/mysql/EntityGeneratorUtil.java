@@ -72,7 +72,7 @@ class EntityGeneratorUtil {
     static ParameterSpec getEntityListParameter(Table table, String userSpecifyPackageName) {
         ParameterizedTypeName listOfTableEntity = listOfTableEntity(table, userSpecifyPackageName);
         String parameterName = MyBatisMapperGeneratorUtil.getBatchInsertParamName();
-        AnnotationSpec paramAnnotationSpec = MybatisFrameworkUtils.getMybatisParamAnnotationSpec(parameterName);
+        AnnotationSpec paramAnnotationSpec = MybatisFrameworkUtils.getParamAnnotationSpec(parameterName);
         return ParameterSpec.builder(listOfTableEntity, parameterName)
                 .addAnnotation(paramAnnotationSpec)
                 .build();

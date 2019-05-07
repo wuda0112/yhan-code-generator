@@ -5,7 +5,6 @@ import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import org.apache.ibatis.annotations.*;
 
 import javax.lang.model.element.Modifier;
 import java.util.ArrayList;
@@ -28,7 +27,7 @@ public class MyBatisMapperGenerator {
     public JavaFile genJavaFile(Table table, String packageName) {
         String className = MyBatisMapperGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.interfaceBuilder(className);
-        classBuilder.addAnnotation(genMapperAnnotation());
+        classBuilder.addAnnotation(MybatisFrameworkUtils.genMapperAnnotation());
         classBuilder.addModifiers(Modifier.PUBLIC);
         classBuilder.addMethod(genInsertMethod(table, packageName));
         classBuilder.addMethod(genBatchInsertMethod(table, packageName));
@@ -45,15 +44,6 @@ public class MyBatisMapperGenerator {
     }
 
     /**
-     * {@link Mapper}注解
-     *
-     * @return {@link Mapper}注解
-     */
-    private AnnotationSpec genMapperAnnotation() {
-        return AnnotationSpec.builder(Mapper.class).build();
-    }
-
-    /**
      * 生成insert方法.
      *
      * @param table                  table
@@ -63,25 +53,13 @@ public class MyBatisMapperGenerator {
     private MethodSpec genInsertMethod(Table table, String userSpecifyPackageName) {
         String methodName = MyBatisMapperGeneratorUtil.getInsertMethodName();
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
+        AnnotationSpec annotationSpec = MybatisFrameworkUtils.getInsertProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
+                MyBatisMapperGeneratorUtil.getInsertMethodName());
         return MethodSpec.methodBuilder(methodName)
-                .addAnnotation(insertMethodAnnotation(table, userSpecifyPackageName))
+                .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
                 .addParameter(parameterSpec)
-                .build();
-    }
-
-    /**
-     * {@link #genInsertMethod(Table, String)}方法上的{@link InsertProvider}注解.
-     *
-     * @param table                  table
-     * @param userSpecifyPackageName package name
-     * @return {@link InsertProvider}
-     */
-    private AnnotationSpec insertMethodAnnotation(Table table, String userSpecifyPackageName) {
-        return AnnotationSpec.builder(InsertProvider.class)
-                .addMember("type", "$T.class", SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName))
-                .addMember("method", "$S", MyBatisMapperGeneratorUtil.getInsertMethodName())
                 .build();
     }
 
@@ -95,8 +73,9 @@ public class MyBatisMapperGenerator {
     private MethodSpec genBatchInsertMethod(Table table, String userSpecifyPackageName) {
         String methodName = MyBatisMapperGeneratorUtil.getBatchInsertMethodName();
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityListParameter(table, userSpecifyPackageName);
+        AnnotationSpec annotationSpec = MybatisFrameworkUtils.getInsertAnnotationSpec(batchInsertScript(table));
         return MethodSpec.methodBuilder(methodName)
-                .addAnnotation(batchInsertMethodAnnotation(table))
+                .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
                 .addParameter(parameterSpec)
@@ -104,19 +83,7 @@ public class MyBatisMapperGenerator {
     }
 
     /**
-     * {@link #genBatchInsertMethod(Table, String)}方法上的{@link Insert}注解.
-     *
-     * @param table table
-     * @return {@link Insert}
-     */
-    private AnnotationSpec batchInsertMethodAnnotation(Table table) {
-        return AnnotationSpec.builder(Insert.class)
-                .addMember("value", "$S", batchInsertScript(table))
-                .build();
-    }
-
-    /**
-     * batch insert sql语句.也就是方法上{@link Insert}注解的值.
+     * Mybatis batch insert sql语句.
      *
      * @param table 数据库表
      * @return 批量插入方法的sql
@@ -163,25 +130,13 @@ public class MyBatisMapperGenerator {
      * @return method
      */
     private MethodSpec genDeleteByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
+        AnnotationSpec annotationSpec = MybatisFrameworkUtils.getDeleteProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
+                MyBatisMapperGeneratorUtil.getDeleteByPrimaryKeyMethodName());
         return MethodSpec.methodBuilder(MyBatisMapperGeneratorUtil.getDeleteByPrimaryKeyMethodName())
-                .addAnnotation(deleteByPrimaryKeyMethodAnnotation(table, userSpecifyPackageName))
+                .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
                 .addParameters(MyBatisMapperGeneratorUtil.getPrimaryKeyParameterSpec(table, true))
-                .build();
-    }
-
-    /**
-     * 为{@link #genDeleteByPrimaryKeyMethod(Table, String)}生成{@link DeleteProvider}注解.
-     *
-     * @param table                  table
-     * @param userSpecifyPackageName package name
-     * @return {@link DeleteProvider}
-     */
-    private AnnotationSpec deleteByPrimaryKeyMethodAnnotation(Table table, String userSpecifyPackageName) {
-        return AnnotationSpec.builder(DeleteProvider.class)
-                .addMember("type", "$T.class", SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName))
-                .addMember("method", "$S", MyBatisMapperGeneratorUtil.getDeleteByPrimaryKeyMethodName())
                 .build();
     }
 
@@ -195,25 +150,13 @@ public class MyBatisMapperGenerator {
     private MethodSpec genUpdateByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
         String methodName = MyBatisMapperGeneratorUtil.getUpdateByPrimaryKeyMethodName();
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
+        AnnotationSpec annotationSpec = MybatisFrameworkUtils.getUpdateProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
+                MyBatisMapperGeneratorUtil.getUpdateByPrimaryKeyMethodName());
         return MethodSpec.methodBuilder(methodName)
-                .addAnnotation(updateByPrimaryKeyMethodAnnotation(table, userSpecifyPackageName))
+                .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
                 .addParameter(parameterSpec)
-                .build();
-    }
-
-    /**
-     * {@link #genUpdateByPrimaryKeyMethod(Table, String)}方法上的{@link UpdateProvider}注解.
-     *
-     * @param table                  table
-     * @param userSpecifyPackageName package name
-     * @return {@link UpdateProvider}
-     */
-    private AnnotationSpec updateByPrimaryKeyMethodAnnotation(Table table, String userSpecifyPackageName) {
-        return AnnotationSpec.builder(UpdateProvider.class)
-                .addMember("type", "$T.class", SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName))
-                .addMember("method", "$S", MyBatisMapperGeneratorUtil.getUpdateByPrimaryKeyMethodName())
                 .build();
     }
 
@@ -271,7 +214,7 @@ public class MyBatisMapperGenerator {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getSelectMethodName(columnNames, primaryKey);
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
-        AnnotationSpec sqlBuilderAnnotation = selectMethodAnnotation(sqlBuilderType, methodName);
+        AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
         TypeName returns;
         Iterable<ParameterSpec> pagingParameterSpecs = null;
         if (primaryKey || uniqueIndex) {
@@ -293,20 +236,6 @@ public class MyBatisMapperGenerator {
     }
 
     /**
-     * 为{@link #genSelectMethod(Table, List, boolean, boolean, String)}生成{@link SelectProvider}注解.
-     *
-     * @param sqlBuilder sql builder type
-     * @param method     method name
-     * @return {@link SelectProvider}
-     */
-    private AnnotationSpec selectMethodAnnotation(TypeName sqlBuilder, String method) {
-        return AnnotationSpec.builder(SelectProvider.class)
-                .addMember("type", "$T.class", sqlBuilder)
-                .addMember("method", "$S", method)
-                .build();
-    }
-
-    /**
      * 生成<code>SELECT COUNT</code>方法,用于获取总数.
      * 具体查看{@link SqlBuilderGenerator#genSelectCountMethod(Table, List, String)}方法的定义.
      *
@@ -319,7 +248,7 @@ public class MyBatisMapperGenerator {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getSelectCountMethodName(columnNames);
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
-        AnnotationSpec sqlBuilderAnnotation = selectMethodAnnotation(sqlBuilderType, methodName);
+        AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
                 .addAnnotation(sqlBuilderAnnotation)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
@@ -342,7 +271,7 @@ public class MyBatisMapperGenerator {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getBatchSelectMethodName(columnNames, primaryKey);
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
-        AnnotationSpec sqlBuilderAnnotation = selectMethodAnnotation(sqlBuilderType, methodName);
+        AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
         ParameterizedTypeName returns = EntityGeneratorUtil.listOfTableEntity(table, userSpecifyPackageName);
         ParameterSpec parameterSpec = MyBatisMapperGeneratorUtil.getBatchSelectParameterSpec(whereClauseColumns, true, table, userSpecifyPackageName);
         ParameterSpec retrieveColumns = MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true);
