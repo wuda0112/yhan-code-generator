@@ -16,10 +16,21 @@ public class Constant {
      * mapper中insert方法的名称.
      */
     public final static String MAPPER_INSERT = "insert";
+
+    /**
+     * mapper中insert方法的名称.
+     */
+    public final static String MAPPER_INSERT_USE_GENERATED_KEYS = "insertUseGeneratedKeys";
+
     /**
      * mapper中batch insert方法的名称.
      */
     public final static String MAPPER_BATCH_INSERT = "batchInsert";
+
+    /**
+     * mapper中batch insert方法的名称.
+     */
+    public final static String MAPPER_BATCH_INSERT_USE_GENERATED_KEYS = "batchInsertUseGeneratedKeys";
     /**
      * mapper中deleteByPrimaryKey方法的名称.
      */

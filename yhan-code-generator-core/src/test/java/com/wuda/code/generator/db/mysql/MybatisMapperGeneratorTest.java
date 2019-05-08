@@ -6,7 +6,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class MybatisMapperGeneratorTest extends GeneratorTestBase{
+public class MybatisMapperGeneratorTest extends GeneratorTestBase {
 
     @Test
     public void testGenJavaFile() {

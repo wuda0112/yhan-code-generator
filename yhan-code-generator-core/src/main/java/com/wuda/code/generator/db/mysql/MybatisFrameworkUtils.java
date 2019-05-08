@@ -100,4 +100,36 @@ class MybatisFrameworkUtils {
                 .build();
     }
 
+    /**
+     * {@link SelectKey}注解.
+     *
+     * @param keyProperty {@link SelectKey#keyProperty()}
+     * @param before      {@link SelectKey#before()}
+     * @param resultType  {@link SelectKey#resultType()}
+     * @return 注解
+     */
+    static AnnotationSpec getSelectKeyAnnotationSpec(String keyProperty, boolean before, Class<?> resultType) {
+        return AnnotationSpec.builder(SelectKey.class)
+                .addMember("statement", "$S", "SELECT LAST_INSERT_ID()")
+                .addMember("keyProperty", "$S", keyProperty)
+                .addMember("before", "$T", before)
+                .addMember("resultType", "$T", resultType)
+                .build();
+    }
+
+    /**
+     * {@link Options}注解中,用于获取<code>AUTO_INCREMENT</code>值的相关内容.
+     *
+     * @param useGeneratedKeys {@link Options#useGeneratedKeys()}
+     * @param keyProperty      {@link Options#keyProperty()}.
+     *                         <a href="http://www.mybatis.org/mybatis-3/sqlmap-xml.html">mybatis</a>
+     * @return 注解
+     */
+    static AnnotationSpec getKeyGenerateAnnotationSpec(boolean useGeneratedKeys, String keyProperty) {
+        return AnnotationSpec.builder(Options.class)
+                .addMember("keyProperty", "$S", keyProperty)
+                .addMember("useGeneratedKeys", "$L", useGeneratedKeys)
+                .build();
+    }
+
 }

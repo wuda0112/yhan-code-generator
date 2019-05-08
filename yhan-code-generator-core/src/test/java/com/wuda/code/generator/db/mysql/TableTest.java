@@ -9,8 +9,8 @@ public class TableTest {
 
     public List<Table> getTable() {
 
-        String ddl = "CREATE TABLE `my_schema`.`user_basic` (\n" +
-                "\t`id` INT(10) UNSIGNED NOT NULL,\n" +
+        String ddl = "CREATE TABLE `user_basic` (\n" +
+                "\t`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,\n" +
                 "\t`username` VARCHAR(50) NULL DEFAULT NULL,\n" +
                 "\t`nickname` VARCHAR(50) NULL DEFAULT NULL,\n" +
                 "\t`phone` VARCHAR(45) NULL DEFAULT NULL,\n" +
@@ -22,6 +22,7 @@ public class TableTest {
                 ")\n" +
                 "COLLATE='utf8_general_ci'\n" +
                 "ENGINE=InnoDB\n" +
+                "AUTO_INCREMENT=21\n" +
                 ";";
         MySqlCreateTableStatementParser parser = new MySqlCreateTableStatementParser();
         return parser.parse(ddl);

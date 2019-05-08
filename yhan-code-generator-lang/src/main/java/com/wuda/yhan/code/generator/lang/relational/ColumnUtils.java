@@ -37,4 +37,22 @@ public class ColumnUtils {
         }
         return columns;
     }
+
+    /**
+     * 获取<i>AUTO_INCREMENT</i>列.
+     *
+     * @param table table
+     * @return AUTO_INCREMENT column or null if not exist
+     */
+    public static Column getAutoIncrementColumn(Table table) {
+        List<Column> primaryKeys = table.primaryKeyColumns();
+        Column autoIncrementColumn = null;
+        for (Column column : primaryKeys) {
+            if (column.isAutoIncremented()) {
+                autoIncrementColumn = column;
+                break;
+            }
+        }
+        return autoIncrementColumn;
+    }
 }
