@@ -40,7 +40,7 @@
     </developers>
 
     <properties>
-        <yhan-base-version>1.0.0</yhan-base-version>
+        <yhan-base-version>1.0.1-SNAPSHOT</yhan-base-version>
     </properties>
 
     <dependencies>

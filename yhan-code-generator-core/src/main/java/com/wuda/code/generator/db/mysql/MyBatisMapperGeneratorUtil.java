@@ -39,66 +39,12 @@ class MyBatisMapperGeneratorUtil {
     }
 
     /**
-     * 获取insert方法的名称.
+     * 获取list参数对应的名称.
      *
-     * @return insert method name
+     * @return param name
      */
-    static String getInsertMethodName() {
-        return Constant.MAPPER_INSERT;
-    }
-
-    /**
-     * 获取batch insert方法的名称.
-     *
-     * @return batch insert method name
-     */
-    static String getBatchInsertMethodName() {
-        return Constant.MAPPER_BATCH_INSERT;
-    }
-
-    /**
-     * 获取batch insert方法参数的名称.
-     *
-     * @return batch insert method param name
-     */
-    static String getBatchInsertParamName() {
+    static String getListParamName() {
         return "list";
-    }
-
-    /**
-     * 获取delete方法的名称.
-     *
-     * @return delete method name
-     */
-    static String getDeleteByPrimaryKeyMethodName() {
-        return Constant.MAPPER_DELETE_BY_PRIMARY_KEY;
-    }
-
-    /**
-     * 获取update方法的名称.
-     *
-     * @return update method name
-     */
-    static String getUpdateByPrimaryKeyMethodName() {
-        return Constant.MAPPER_UPDATE_BY_PRIMARY_KEY;
-    }
-
-    /**
-     * 获取select方法的名称.
-     *
-     * @return select method name
-     */
-    static String getSelectByPrimaryKeyMethodName() {
-        return Constant.MAPPER_SELECT_BY_PRIMARY_KEY;
-    }
-
-    /**
-     * 获取batch select方法的名称.
-     *
-     * @return select method name
-     */
-    static String getBatchSelectByPrimaryKeyMethodName() {
-        return Constant.MAPPER_BATCH_SELECT_BY_PRIMARY_KEY;
     }
 
     /**
@@ -142,7 +88,7 @@ class MyBatisMapperGeneratorUtil {
      * @return 输入参数定义
      */
     static ParameterSpec getBatchSelectParameterSpec(List<Column> columns, boolean mybatisParamAnnotation, Table table, String userSpecifyPackageName) {
-        String parameterName = getBatchInsertParamName();
+        String parameterName = getListParamName();
         ParameterizedTypeName parameterizedTypeName;
         if (columns.size() == 1) {
             Column column = columns.get(0);
@@ -223,7 +169,7 @@ class MyBatisMapperGeneratorUtil {
      */
     static String getSelectMethodName(List<String> whereClauseColumns, boolean primaryKey) {
         if (primaryKey) {
-            return MyBatisMapperGeneratorUtil.getSelectByPrimaryKeyMethodName();
+            return Constant.MAPPER_SELECT_BY_PRIMARY_KEY;
         }
         StringBuilder builder = new StringBuilder(Constant.SELECT_BY_PREFIX);
         andSeparated(whereClauseColumns, builder);
@@ -239,7 +185,7 @@ class MyBatisMapperGeneratorUtil {
      */
     static String getBatchSelectMethodName(List<String> whereClauseColumns, boolean primaryKey) {
         if (primaryKey) {
-            return MyBatisMapperGeneratorUtil.getBatchSelectByPrimaryKeyMethodName();
+            return Constant.MAPPER_BATCH_SELECT_BY_PRIMARY_KEY;
         }
         StringBuilder builder = new StringBuilder(Constant.BATCH_SELECT_BY_PREFIX);
         andSeparated(whereClauseColumns, builder);

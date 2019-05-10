@@ -81,6 +81,15 @@ class TableMetaInfoGeneratorUtil {
     }
 
     /**
+     * auto-increment column.
+     *
+     * @return field name
+     */
+    static String getAutoIncrementColumn() {
+        return "AUTO_INCREMENT_COLUMN";
+    }
+
+    /**
      * SCHEMA DOT TABLE field的名称.
      *
      * @return field name

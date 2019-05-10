@@ -36,6 +36,7 @@ public class SqlBuilderGenerator {
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.addMethod(genInsertMethod(table, packageName));
+        classBuilder.addMethod(genBatchInsertUseGeneratedKeysMethod(table, packageName));
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName));
@@ -56,7 +57,7 @@ public class SqlBuilderGenerator {
      * @return insert method
      */
     private MethodSpec genInsertMethod(Table table, String userSpecifyPackageName) {
-        String methodName = MyBatisMapperGeneratorUtil.getInsertMethodName();
+        String methodName = Constant.MAPPER_INSERT;
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
 
         TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
@@ -96,6 +97,50 @@ public class SqlBuilderGenerator {
         return sql.toString();
     }
 
+
+    /**
+     * generate insert method.
+     *
+     * @param table                  表的基本信息
+     * @param userSpecifyPackageName 用户指定的包
+     * @return insert method
+     */
+    private MethodSpec genBatchInsertUseGeneratedKeysMethod(Table table, String userSpecifyPackageName) {
+        String methodName = Constant.MAPPER_BATCH_INSERT_USE_GENERATED_KEYS;
+        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityListParameter(table, userSpecifyPackageName);
+
+        TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+        String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
+        String autoIncrementColumn = TableMetaInfoGeneratorUtil.getAutoIncrementColumn();
+
+        return MethodSpec.methodBuilder(methodName)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(String.class)
+                .addParameter(parameterSpec)
+                .addStatement("$T sql = new $T()", SQL.class, SQL.class)
+                .addStatement("sql.INSERT_INTO($T.$L)", tableMetaInfo, schemaDotTable)
+                .addStatement("$T.batchInsertUseGeneratedKeysColumnsAndValues(sql,$L,$S,$T.$L)", SqlProviderUtils.class, parameterSpec.name, parameterSpec.name, tableMetaInfo, autoIncrementColumn)
+                .addStatement("return sql.toString()")
+                .build();
+    }
+
+    /**
+     * 为{@link #genBatchInsertUseGeneratedKeysMethod(Table, String)}提供方法体模板.
+     *
+     * @param schemaDotTable      schema.table
+     * @param list                表对应的实体
+     * @param collectionName      集合名称,类似Mybatis foreach中的collection
+     * @param autoIncrementColumn auto-increment column
+     * @return sql
+     */
+    @SuppressWarnings("unused")
+    private String batchInsertUseGeneratedKeysMethodStatementTemplate(String schemaDotTable, List<TableEntity> list, String collectionName, String autoIncrementColumn) {
+        SQL sql = new SQL();
+        sql.INSERT_INTO(schemaDotTable);
+        SqlProviderUtils.batchInsertUseGeneratedKeysColumnsAndValues(sql, list, collectionName, autoIncrementColumn);
+        return sql.toString();
+    }
+
     /**
      * generate delete method.
      *
@@ -104,7 +149,7 @@ public class SqlBuilderGenerator {
      * @return delete method
      */
     private MethodSpec genDeleteByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        String methodName = MyBatisMapperGeneratorUtil.getDeleteByPrimaryKeyMethodName();
+        String methodName = Constant.MAPPER_DELETE_BY_PRIMARY_KEY;
         Iterable<ParameterSpec> parameterSpecs = MyBatisMapperGeneratorUtil.getPrimaryKeyParameterSpec(table, true);
 
         TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
@@ -145,7 +190,7 @@ public class SqlBuilderGenerator {
      * @return update method
      */
     private MethodSpec genUpdateByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        String methodName = MyBatisMapperGeneratorUtil.getUpdateByPrimaryKeyMethodName();
+        String methodName = Constant.MAPPER_UPDATE_BY_PRIMARY_KEY;
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         ParameterSpec entityParameter = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
 
@@ -405,7 +450,7 @@ public class SqlBuilderGenerator {
         TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
         String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
 
-        String collectionName = MyBatisMapperGeneratorUtil.getBatchInsertParamName();
+        String collectionName = MyBatisMapperGeneratorUtil.getListParamName();
 
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)

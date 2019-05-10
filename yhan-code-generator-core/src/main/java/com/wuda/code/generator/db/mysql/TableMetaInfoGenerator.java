@@ -6,6 +6,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.code.generator.lang.relational.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 
 import javax.lang.model.element.Modifier;
@@ -34,6 +35,10 @@ public class TableMetaInfoGenerator {
         classBuilder.addField(genTableNameField(table));
         classBuilder.addField(genSchemaDotTableField(table));
         classBuilder.addField(genPrimaryKeyField(table));
+        FieldSpec autoIncrement = genAutoIncrementField(table);
+        if (autoIncrement != null) {
+            classBuilder.addField(autoIncrement);
+        }
         Iterable<FieldSpec> fieldSpecs = genFields(table);
         if (fieldSpecs != null) {
             classBuilder.addFields(fieldSpecs);
@@ -95,6 +100,22 @@ public class TableMetaInfoGenerator {
     private FieldSpec genSchemaDotTableField(Table table) {
         return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
                 .initializer("$S", table.id().toQuotedString('`'))
+                .build();
+    }
+
+    /**
+     * auto-increment field
+     *
+     * @param table table
+     * @return field
+     */
+    private FieldSpec genAutoIncrementField(Table table) {
+        Column column = ColumnUtils.getAutoIncrementColumn(table);
+        if (column == null) {
+            return null;
+        }
+        return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getAutoIncrementColumn(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
+                .initializer("$S", column.name())
                 .build();
     }
 

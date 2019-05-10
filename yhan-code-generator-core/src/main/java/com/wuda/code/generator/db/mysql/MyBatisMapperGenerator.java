@@ -30,16 +30,16 @@ public class MyBatisMapperGenerator {
         TypeSpec.Builder classBuilder = TypeSpec.interfaceBuilder(className);
         classBuilder.addAnnotation(MybatisFrameworkUtils.genMapperAnnotation());
         classBuilder.addModifiers(Modifier.PUBLIC);
+        classBuilder.addMethod(genInsertMethod(table, packageName, false));
         MethodSpec insertUseGeneratedKeys = genInsertMethod(table, packageName, true);
         if (insertUseGeneratedKeys != null) {
             classBuilder.addMethod(insertUseGeneratedKeys);
         }
-        classBuilder.addMethod(genInsertMethod(table, packageName, false));
-        MethodSpec batchInsertUseGeneratedKeys = genBatchInsertMethod(table, packageName, true);
+        classBuilder.addMethod(genBatchInsertMethod(table, packageName));
+        MethodSpec batchInsertUseGeneratedKeys = genBatchInsertUseGeneratedKeysMethod(table, packageName);
         if (batchInsertUseGeneratedKeys != null) {
             classBuilder.addMethod(batchInsertUseGeneratedKeys);
         }
-        classBuilder.addMethod(genBatchInsertMethod(table, packageName, false));
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName));
@@ -68,16 +68,46 @@ public class MyBatisMapperGenerator {
             }
             methodName = Constant.MAPPER_INSERT_USE_GENERATED_KEYS;
         } else {
-            methodName = MyBatisMapperGeneratorUtil.getInsertMethodName();
+            methodName = Constant.MAPPER_INSERT;
         }
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
         AnnotationSpec insertProviderAnnotationSpec = MybatisFrameworkUtils.getInsertProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
-                MyBatisMapperGeneratorUtil.getInsertMethodName());
+                Constant.MAPPER_INSERT);
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         builder.addAnnotation(insertProviderAnnotationSpec);
         if (useGeneratedKeys) {
             builder.addAnnotation(useGeneratedKeysAnnotationSpec(table));
         }
+        builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .returns(TypeName.INT)
+                .addParameter(parameterSpec);
+        return builder.build();
+    }
+
+    /**
+     * 生成Batch Insert UseGeneratedKeys方法.
+     *
+     * @param table                  table
+     * @param userSpecifyPackageName package name
+     * @return insert method
+     */
+    private MethodSpec genBatchInsertUseGeneratedKeysMethod(Table table, String userSpecifyPackageName) {
+        if (ColumnUtils.getAutoIncrementColumn(table) == null) {
+            return null;
+        }
+        String methodName = Constant.MAPPER_BATCH_INSERT_USE_GENERATED_KEYS;
+        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityListParameter(table, userSpecifyPackageName);
+        AnnotationSpec insertProviderAnnotationSpec = MybatisFrameworkUtils.getInsertProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
+                methodName);
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
+        builder.addJavadoc("对于自增的主键,insert后返回主键值." +
+                "\r\n<strong>注意</strong>,如果某一条准备插入的记录的<i>AUTO_INCREMENT</i>列设置了值" +
+                "\r\n,即不使用数据库自增的值" +
+                "\r\n,那么取回的自增值会出现混乱.因此此方法强制<i>AUTO_INCREMENT</i>列不能设置值." +
+                "\r\n{@link org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator#processBatch}." +
+                "\r\n<a href=\"https://dev.mysql.com/doc/refman/8.0/en/information-functions.html#function_last-insert-id\">last_insert_id</a>");
+        builder.addAnnotation(insertProviderAnnotationSpec);
+        builder.addAnnotation(useGeneratedKeysAnnotationSpec(table));
         builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
                 .addParameter(parameterSpec);
@@ -100,26 +130,14 @@ public class MyBatisMapperGenerator {
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
-     * @param useGeneratedKeys       对于自增的主键,insert后是否返回主键值
      * @return batch insert method
      */
-    private MethodSpec genBatchInsertMethod(Table table, String userSpecifyPackageName, boolean useGeneratedKeys) {
-        String methodName;
-        if (useGeneratedKeys) {
-            if (ColumnUtils.getAutoIncrementColumn(table) == null) {
-                return null;
-            }
-            methodName = Constant.MAPPER_BATCH_INSERT_USE_GENERATED_KEYS;
-        } else {
-            methodName = MyBatisMapperGeneratorUtil.getBatchInsertMethodName();
-        }
+    private MethodSpec genBatchInsertMethod(Table table, String userSpecifyPackageName) {
+        String methodName = Constant.MAPPER_BATCH_INSERT;
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityListParameter(table, userSpecifyPackageName);
         AnnotationSpec insertAnnotationSpec = MybatisFrameworkUtils.getInsertAnnotationSpec(batchInsertScript(table));
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         builder.addAnnotation(insertAnnotationSpec);
-        if (useGeneratedKeys) {
-            builder.addAnnotation(useGeneratedKeysAnnotationSpec(table));
-        }
         builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
                 .addParameter(parameterSpec);
@@ -143,16 +161,16 @@ public class MyBatisMapperGenerator {
         List<Column> tableColumns = table.columns();
         StringBuilder columns = new StringBuilder();
         StringBuilder values = new StringBuilder();
+        String item = "entity";
         String columnName;
         for (Column column : tableColumns) {
             columnName = column.name();
             columns.append(columnName).append(",");
-            values.append("#{entity.").append(EntityGeneratorUtil.toFieldName(columnName)).append("},");
+            values.append("#{").append(item).append(".").append(EntityGeneratorUtil.toFieldName(columnName)).append("},");
         }
 
         builder.append("(").append(columns.substring(0, columns.length() - 1)).append(")");
-        String item = "entity";
-        String collection = MyBatisMapperGeneratorUtil.getBatchInsertParamName();
+        String collection = MyBatisMapperGeneratorUtil.getListParamName();
         builder.append(newLine);
         builder.append(" VALUES");
         builder.append(newLine);
@@ -175,8 +193,8 @@ public class MyBatisMapperGenerator {
      */
     private MethodSpec genDeleteByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
         AnnotationSpec annotationSpec = MybatisFrameworkUtils.getDeleteProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
-                MyBatisMapperGeneratorUtil.getDeleteByPrimaryKeyMethodName());
-        return MethodSpec.methodBuilder(MyBatisMapperGeneratorUtil.getDeleteByPrimaryKeyMethodName())
+                Constant.MAPPER_DELETE_BY_PRIMARY_KEY);
+        return MethodSpec.methodBuilder(Constant.MAPPER_DELETE_BY_PRIMARY_KEY)
                 .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
@@ -192,10 +210,10 @@ public class MyBatisMapperGenerator {
      * @return update method
      */
     private MethodSpec genUpdateByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        String methodName = MyBatisMapperGeneratorUtil.getUpdateByPrimaryKeyMethodName();
+        String methodName = Constant.MAPPER_UPDATE_BY_PRIMARY_KEY;
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
         AnnotationSpec annotationSpec = MybatisFrameworkUtils.getUpdateProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
-                MyBatisMapperGeneratorUtil.getUpdateByPrimaryKeyMethodName());
+                Constant.MAPPER_UPDATE_BY_PRIMARY_KEY);
         return MethodSpec.methodBuilder(methodName)
                 .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)

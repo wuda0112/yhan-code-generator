@@ -1,5 +1,6 @@
 package com.wuda.yhan.code.generator.lang;
 
+import com.wuda.yhan.util.commons.BeanUtils;
 import com.wuda.yhan.util.commons.JavaNamingUtil;
 import org.apache.ibatis.jdbc.SQL;
 
@@ -32,6 +33,71 @@ public class SqlProviderUtils {
         }
         sql.INTO_COLUMNS(columns);
         sql.INTO_VALUES(values);
+    }
+
+    /**
+     * batch insert,并且希望取回数据库自增列的值,不能提前设置,
+     * 否则会出现混乱.为了严格防止这种情况发生,不使用<i>script</i>
+     * 方式,而是使用动态sql,目的是为了检查传入的记录中,<i>AUTO_INCREMENT</i>
+     * 列对应的属性是否设置了值.
+     *
+     * @param sql                 sql
+     * @param list                list of entity
+     * @param collectionName      集合名称,类似于Mybatis foreach中的定义
+     * @param autoIncrementColumn AUTO_INCREMENT column
+     */
+    public static void batchInsertUseGeneratedKeysColumnsAndValues(SQL sql,
+                                                                   List<? extends TableEntity> list,
+                                                                   String collectionName,
+                                                                   String autoIncrementColumn) {
+        Map<String, String> fieldToColumnMap = TableEntityUtils.fieldToColumn(list.get(0).getClass());
+        Set<Map.Entry<String, String>> entrySet = fieldToColumnMap.entrySet();
+        // auto-increment 列排除
+        String[] columns = new String[fieldToColumnMap.size() - 1];
+        int index = 0;
+        String columnName;
+        String fieldName;
+        String columnValuePlaceholder;
+        StringBuilder valueStatementTemplateBuilder = new StringBuilder();
+        String placeholder = "-k-";
+        for (Map.Entry<String, String> entry : entrySet) {
+            columnName = entry.getValue();
+            if (columnName.equalsIgnoreCase(autoIncrementColumn)) {
+                continue;
+            }
+            columns[index] = columnName;
+            fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+            columnValuePlaceholder = "#{" + collectionName + "[" + placeholder + "]." + fieldName + "}";
+            valueStatementTemplateBuilder.append(columnValuePlaceholder);
+            if (index != columns.length - 1) {
+                valueStatementTemplateBuilder.append(",");
+            }
+            index++;
+        }
+        String valueStatementTemplate = valueStatementTemplateBuilder.toString();
+        int k = 0;
+        StringBuilder builder = new StringBuilder();
+        String autoIncrementField = JavaNamingUtil.toCamelCase(autoIncrementColumn, Constant.word_separator);
+        for (TableEntity entity : list) {
+            if (k != 0) {
+                builder.append("(");
+            }
+            Object autoIncrementColumnValue = BeanUtils.getValue(entity, autoIncrementField);
+            if (autoIncrementColumnValue != null) {
+                throw new RuntimeException("batch insert,从数据库取回自增值时" +
+                        ",必须使用数据库自增,不能提前设置值,否则会出现混乱" +
+                        ".column=" + autoIncrementColumn + " 设置了值" +
+                        ".可以考虑使用" + Constant.MAPPER_BATCH_INSERT);
+            }
+            String value = valueStatementTemplate.replaceAll(placeholder, k + "");
+            builder.append(value);
+            if (k != list.size() - 1) {
+                builder.append("),");
+            }
+            k++;
+        }
+        sql.INTO_COLUMNS(columns);
+        sql.INTO_VALUES(builder.toString());
     }
 
     /**

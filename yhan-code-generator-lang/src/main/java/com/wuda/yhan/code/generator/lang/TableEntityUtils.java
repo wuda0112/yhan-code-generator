@@ -1,7 +1,7 @@
 package com.wuda.yhan.code.generator.lang;
 
 import com.wuda.yhan.util.commons.BeanUtils;
-import com.wuda.yhan.util.commons.BeanUtils.AnnotationContailsPolicy;
+import com.wuda.yhan.util.commons.BeanUtils.AnnotationContainsPolicy;
 import com.wuda.yhan.util.commons.IsSetFieldUtil;
 import com.wuda.yhan.util.commons.PojoFieldInfo;
 import com.wuda.yhan.util.commons.StringUtil;
@@ -30,22 +30,28 @@ public class TableEntityUtils {
     /**
      * 所有entity的class是否同一个类型.
      *
-     * @param entities
-     *         entities
+     * @param entities entities
      * @return true-如果都是同一个class类型
      */
     public static boolean sameType(List<TableEntity> entities) {
+        if (entities == null || entities.size() == 0) {
+            return true;
+        }
+        Class first = entities.get(0).getClass();
+        for (int i = 1; i < entities.size(); i++) {
+            if (!entities.get(i).getClass().equals(first)) {
+                return false;
+            }
+        }
         return true;
     }
 
     /**
      * key是属性名称,value该属性对应的数据库表的列名.
      *
-     * @param entity
-     *         表对应的实体
-     * @param onlySetterCalledField
-     *         是否值获取调用过setter方法的属性,
-     *         具体查看{@link com.wuda.yhan.util.commons.IsSetField}定义
+     * @param entity                表对应的实体
+     * @param onlySetterCalledField 是否值获取调用过setter方法的属性,
+     *                              具体查看{@link com.wuda.yhan.util.commons.IsSetField}定义
      * @return field和column的映射
      */
     public static Map<String, String> fieldToColumn(TableEntity entity, boolean onlySetterCalledField) {
@@ -56,8 +62,7 @@ public class TableEntityUtils {
     /**
      * key是属性名称,value该属性对应的数据库表的列名.
      *
-     * @param clazz
-     *         class
+     * @param clazz class
      * @return field和column的映射
      */
     public static Map<String, String> fieldToColumn(Class<? extends TableEntity> clazz) {
@@ -68,11 +73,9 @@ public class TableEntityUtils {
     /**
      * key是属性名称,value是该属性的值.
      *
-     * @param entity
-     *         表对应的实体
-     * @param onlySetterCalledField
-     *         是否值获取调用过setter方法的属性,
-     *         具体查看{@link com.wuda.yhan.util.commons.IsSetField}定义
+     * @param entity                表对应的实体
+     * @param onlySetterCalledField 是否值获取调用过setter方法的属性,
+     *                              具体查看{@link com.wuda.yhan.util.commons.IsSetField}定义
      * @return field和value的映射
      */
     public static Map<String, Object> fieldToValue(TableEntity entity, boolean onlySetterCalledField) {
@@ -99,8 +102,7 @@ public class TableEntityUtils {
     /**
      * 根据entity class找到对应的mybatis mapper类.
      *
-     * @param clazz
-     *         {@link TableEntity} class
+     * @param clazz {@link TableEntity} class
      * @return 对应的mybatis mapper
      */
     public static Class<?> getMybatisMapper(Class<? extends TableEntity> clazz) {
@@ -125,10 +127,8 @@ public class TableEntityUtils {
      * 虽然<i>field</i>数据类型是Integer,但是由于数据库中的定义是TINYINT
      * UNSIGNED,因此它的值随机从[0,256)范围内取一个数
      *
-     * @param <T>
-     *         entity类
-     * @param clazz
-     *         具体的某个entity class
+     * @param <T>   entity类
+     * @param clazz 具体的某个entity class
      * @return 属性取随机值的实例
      */
     public static <T extends TableEntity> T genRandomValueInstance(Class<T> clazz) {
@@ -139,7 +139,7 @@ public class TableEntityUtils {
             throw new RuntimeException("clazz没有空的构造函数,不能实例化!clazz=" + clazz, e);
         }
         List<PojoFieldInfo> fieldInfos = BeanUtils.getFieldInfoList(clazz, false, true, onlyColumnAnnotation(),
-                AnnotationContailsPolicy.CONTAILS_ALL);
+                AnnotationContainsPolicy.CONTAINS_ALL);
         for (PojoFieldInfo fieldInfo : fieldInfos) {
             Method setter = fieldInfo.getSetter();
             Column columnAnnotation = (Column) fieldInfo.getAnnotations().get(0);
@@ -163,8 +163,7 @@ public class TableEntityUtils {
     /**
      * key是属性名称,value该属性对应的数据库表的列名.
      *
-     * @param fields
-     *         {@link TableEntity}类的属性
+     * @param fields {@link TableEntity}类的属性
      * @return field-column mapping
      */
     private static Map<String, String> fieldToColumn(Field[] fields) {
@@ -184,11 +183,9 @@ public class TableEntityUtils {
      * 获取{@link TableEntity}的属性,<strong>注意</strong>不包含
      * {@link com.wuda.yhan.util.commons.IsSetField}标记的属性.
      *
-     * @param entity
-     *         表对应的实体
-     * @param onlySetterCalledField
-     *         是否值获取调用过setter方法的属性,
-     *         具体查看{@link com.wuda.yhan.util.commons.IsSetField}定义
+     * @param entity                表对应的实体
+     * @param onlySetterCalledField 是否值获取调用过setter方法的属性,
+     *                              具体查看{@link com.wuda.yhan.util.commons.IsSetField}定义
      * @return fields
      */
     private static Field[] getField(TableEntity entity, boolean onlySetterCalledField) {
@@ -205,12 +202,11 @@ public class TableEntityUtils {
      * 获取{@link TableEntity}的属性,<strong>注意</strong>不包含
      * {@link com.wuda.yhan.util.commons.IsSetField}标记的属性.
      *
-     * @param clazz
-     *         class
+     * @param clazz class
      * @return fields
      */
     private static Field[] getField(Class<? extends TableEntity> clazz) {
-        List<PojoFieldInfo> fieldInfoList = BeanUtils.getFieldInfoList(clazz, false, false, onlyColumnAnnotation(), AnnotationContailsPolicy.CONTAILS_ALL);
+        List<PojoFieldInfo> fieldInfoList = BeanUtils.getFieldInfoList(clazz, false, false, onlyColumnAnnotation(), AnnotationContainsPolicy.CONTAINS_ALL);
         if (fieldInfoList == null || fieldInfoList.isEmpty()) {
             return null;
         }
