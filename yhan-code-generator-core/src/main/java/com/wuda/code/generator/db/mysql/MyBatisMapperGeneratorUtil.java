@@ -165,15 +165,21 @@ class MyBatisMapperGeneratorUtil {
      *
      * @param whereClauseColumns where条件中的所有column
      * @param primaryKey         这些column是否组成主键
+     * @param forUpdate          SELECT ... FOR UPDATE
      * @return 对应的方法名
      */
-    static String getSelectMethodName(List<String> whereClauseColumns, boolean primaryKey) {
+    static String getSelectMethodName(List<String> whereClauseColumns, boolean primaryKey, boolean forUpdate) {
+        StringBuilder methodName = new StringBuilder();
         if (primaryKey) {
-            return Constant.MAPPER_SELECT_BY_PRIMARY_KEY;
+            methodName.append(Constant.MAPPER_SELECT_BY_PRIMARY_KEY);
+        } else {
+            methodName.append(Constant.SELECT_BY_PREFIX);
+            andSeparated(whereClauseColumns, methodName);
         }
-        StringBuilder builder = new StringBuilder(Constant.SELECT_BY_PREFIX);
-        andSeparated(whereClauseColumns, builder);
-        return builder.toString();
+        if (forUpdate) {
+            methodName.append(Constant.FOR_UPDATE_SUFFIX);
+        }
+        return methodName.toString();
     }
 
     /**

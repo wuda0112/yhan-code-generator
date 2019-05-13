@@ -42,7 +42,8 @@ public class MyBatisMapperGenerator {
         }
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
-        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName));
+        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, false));
+        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, true));
         classBuilder.addMethod(genBatchSelectMethod(table, table.primaryKeyColumns(), true, packageName));
         Iterable<MethodSpec> selectByIndexMethods = genSelectByIndexMethod(table, packageName);
         if (selectByIndexMethods != null) {
@@ -227,10 +228,11 @@ public class MyBatisMapperGenerator {
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
+     * @param forUpdate              SELECT ... FOR UPDATE
      * @return method
      */
-    private MethodSpec genSelectByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        return genSelectMethod(table, table.primaryKeyColumns(), true, false, userSpecifyPackageName);
+    private MethodSpec genSelectByPrimaryKeyMethod(Table table, String userSpecifyPackageName, boolean forUpdate) {
+        return genSelectMethod(table, userSpecifyPackageName, table.primaryKeyColumns(), true, false, forUpdate);
     }
 
     /**
@@ -248,7 +250,7 @@ public class MyBatisMapperGenerator {
         List<MethodSpec> methods = new ArrayList<>(indices.size());
         for (Index index : indices) {
             List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
-            MethodSpec methodSpec = genSelectMethod(table, indexColumns, false, index.getType() == Index.Type.UNIQUE, userSpecifyPackageName);
+            MethodSpec methodSpec = genSelectMethod(table, userSpecifyPackageName, indexColumns, false, index.getType() == Index.Type.UNIQUE, false);
             methods.add(methodSpec);
             if (index.getType() != Index.Type.UNIQUE) {
                 MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);
@@ -262,19 +264,20 @@ public class MyBatisMapperGenerator {
     }
 
     /**
-     * 具体查看{@link SqlBuilderGenerator#genSelectMethod(Table, List, boolean, boolean, String)}方法的定义.
+     * 具体查看{@link SqlBuilderGenerator#genSelectMethod(Table, String, List, boolean, boolean, boolean)}方法的定义.
      *
      * @param table                  table
+     * @param userSpecifyPackageName user specify package name
      * @param whereClauseColumns     where clause columns
      * @param primaryKey             is primary key
      * @param uniqueIndex            is unique index
-     * @param userSpecifyPackageName user specify package name
+     * @param forUpdate              SELECT ... FOR UPDATE
      * @return {@link MethodSpec}
-     * @see SqlBuilderGenerator#genSelectMethod(Table, List, boolean, boolean, String)
+     * @see SqlBuilderGenerator#genSelectMethod(Table, String, List, boolean, boolean, boolean)
      */
-    private MethodSpec genSelectMethod(Table table, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, String userSpecifyPackageName) {
+    private MethodSpec genSelectMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, boolean forUpdate) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
-        String methodName = MyBatisMapperGeneratorUtil.getSelectMethodName(columnNames, primaryKey);
+        String methodName = MyBatisMapperGeneratorUtil.getSelectMethodName(columnNames, primaryKey, forUpdate);
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
         AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
         TypeName returns;

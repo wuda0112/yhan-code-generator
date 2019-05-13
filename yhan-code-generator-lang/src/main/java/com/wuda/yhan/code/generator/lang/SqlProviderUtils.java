@@ -244,6 +244,15 @@ public class SqlProviderUtils {
     }
 
     /**
+     * 追加for update.
+     *
+     * @param builder sql statement
+     */
+    public static void appendForUpdate(StringBuilder builder) {
+        builder.append(" ").append(Constant.FOR_UPDATE_STATEMENT);
+    }
+
+    /**
      * Returns a comma-separated String representation of this list, quoting all
      * name parts with the {@code "} char.
      *

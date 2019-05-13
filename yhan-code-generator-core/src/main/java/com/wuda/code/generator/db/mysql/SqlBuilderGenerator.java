@@ -1,6 +1,7 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
+import com.wuda.code.generator.CodeGenerateException;
 import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
@@ -39,7 +40,8 @@ public class SqlBuilderGenerator {
         classBuilder.addMethod(genBatchInsertUseGeneratedKeysMethod(table, packageName));
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
         classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
-        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName));
+        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, false));
+        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, true));
         classBuilder.addMethod(genBatchSelectMethod(table, table.primaryKeyColumns(), true, packageName));
         Iterable<MethodSpec> selectByIndexMethods = genSelectByIndexMethodSpec(table, packageName);
         if (selectByIndexMethods != null) {
@@ -239,11 +241,12 @@ public class SqlBuilderGenerator {
      *
      * @param table                  table
      * @param userSpecifyPackageName 用户指定的包名
+     * @param forUpdate              SELECT ... FOR UPDATE
      * @return select by primary method
      */
-    private MethodSpec genSelectByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
+    private MethodSpec genSelectByPrimaryKeyMethod(Table table, String userSpecifyPackageName, boolean forUpdate) {
         List<Column> primaryKeyColumns = table.primaryKeyColumns();
-        return genSelectMethod(table, primaryKeyColumns, true, false, userSpecifyPackageName);
+        return genSelectMethod(table, userSpecifyPackageName, primaryKeyColumns, true, false, forUpdate);
     }
 
     /**
@@ -253,15 +256,19 @@ public class SqlBuilderGenerator {
      * 不过最好还是在有索引的列上生成查询方法.
      *
      * @param table                  table
+     * @param userSpecifyPackageName 用户指定的包名称
      * @param whereClauseColumns     sql查询语句中where条件的列
      * @param primaryKey             给定的这些列是否组成主键
      * @param uniqueIndex            给定的这些列是否唯一索引
-     * @param userSpecifyPackageName 用户指定的包名称
+     * @param forUpdate              SELECT ... FOR UPDATE
      * @return 查询方法
      */
-    private MethodSpec genSelectMethod(Table table, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, String userSpecifyPackageName) {
+    private MethodSpec genSelectMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, boolean forUpdate) {
+        if (!primaryKey && forUpdate) {
+            throw new CodeGenerateException("暂时不支持在非主键字段上生成forUpdate语法的查询方法");
+        }
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
-        String methodName = MyBatisMapperGeneratorUtil.getSelectMethodName(columnNames, primaryKey);
+        String methodName = MyBatisMapperGeneratorUtil.getSelectMethodName(columnNames, primaryKey, forUpdate);
 
         Iterable<ParameterSpec> whereClauseParameterSpecs = MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true);
         ParameterSpec retrieveColumnParameter = MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true);
@@ -291,6 +298,9 @@ public class SqlBuilderGenerator {
         }
         builder.addStatement("$T builder = new $T()", StringBuilder.class, StringBuilder.class)
                 .addStatement("sql.usingAppender(builder)");
+        if (forUpdate) {
+            builder.addStatement("$T.appendForUpdate(builder)", SqlProviderUtils.class);
+        }
         if (paging) {
             builder.addStatement("$T.appendPaging(builder)", SqlProviderUtils.class);
         }
@@ -299,10 +309,11 @@ public class SqlBuilderGenerator {
     }
 
     /**
-     * 为{@link #genSelectMethod(Table, List, boolean, boolean, String)}提供方法体模板.
+     * 为{@link #genSelectMethod(Table, String, List, boolean, boolean, boolean)}提供方法体模板.
      *
      * @param schemaDotTable     schema.table
      * @param whereClauseColumns where条件中的columns
+     * @param forUpdate          SELECT ... FOR UPDATE
      * @param paging             是否分页
      * @param offset             分页的offset
      * @param rowCount           分页的row count
@@ -310,7 +321,7 @@ public class SqlBuilderGenerator {
      * @return sql
      */
     @SuppressWarnings("unused")
-    private String selectMethodStatementTemplate(String schemaDotTable, String[] whereClauseColumns, boolean paging, int offset, int rowCount, String... columns) {
+    private String selectMethodStatementTemplate(String schemaDotTable, String[] whereClauseColumns, boolean forUpdate, boolean paging, int offset, int rowCount, String... columns) {
         SqlProviderUtils.selectColumnsValidate(columns);
         SQL sql = new SQL();
         sql.SELECT(columns);
@@ -318,6 +329,9 @@ public class SqlBuilderGenerator {
         SqlProviderUtils.whereConditions(sql, whereClauseColumns);
         StringBuilder builder = new StringBuilder();
         sql.usingAppender(builder);
+        if (forUpdate) {
+            SqlProviderUtils.appendForUpdate(builder);
+        }
         if (paging) {
             SqlProviderUtils.appendPaging(builder);
         }
@@ -383,7 +397,7 @@ public class SqlBuilderGenerator {
      * <p>
      * 方法名的定义如下
      * <ul>
-     * <li>如果是主键,方法名是{@link MyBatisMapperGeneratorUtil#getSelectByPrimaryKeyMethodName}</li>
+     * <li>如果是主键,方法名是{@link Constant#MAPPER_SELECT_BY_PRIMARY_KEY}</li>
      * <li>非主键索引,把索引中的字段用"And"连接起来,再加上<i>selectBy</i>前缀.
      * </ul>
      * 方法输入参数的定义如下
@@ -415,7 +429,7 @@ public class SqlBuilderGenerator {
         List<MethodSpec> methods = new ArrayList<>(indices.size());
         for (Index index : indices) {
             List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
-            MethodSpec methodSpec = genSelectMethod(table, indexColumns, false, index.getType() == Index.Type.UNIQUE, userSpecifyPackageName);
+            MethodSpec methodSpec = genSelectMethod(table, userSpecifyPackageName, indexColumns, false, index.getType() == Index.Type.UNIQUE, false);
             methods.add(methodSpec);
             if (index.getType() != Index.Type.UNIQUE) {
                 MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);

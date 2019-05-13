@@ -84,6 +84,16 @@ public class Constant {
     /**
      * retrieveColumns.
      */
-    public final static String RETRIEVE_COLUMNS="retrieveColumns";
+    public final static String RETRIEVE_COLUMNS = "retrieveColumns";
+
+    /**
+     * for update suffix.
+     */
+    public final static String FOR_UPDATE_SUFFIX = "ForUpdate";
+
+    /**
+     * for update.
+     */
+    public final static String FOR_UPDATE_STATEMENT = "FOR UPDATE";
 
 }
