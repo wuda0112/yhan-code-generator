@@ -40,7 +40,7 @@ public class SqlBuilderGenerator {
         }
         // 主键
         List<Column> primaryKeyColumns = table.primaryKeyColumns();
-        classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
+        classBuilder.addMethod(genDeleteMethod(table, packageName, primaryKeyColumns, true));
         classBuilder.addMethod(genUpdateMethod(table, packageName, primaryKeyColumns, true));
         classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, false));
         classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, true));
@@ -50,6 +50,7 @@ public class SqlBuilderGenerator {
         if (uniqueIndices != null && !uniqueIndices.isEmpty()) {
             for (Index index : uniqueIndices) {
                 List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
+                classBuilder.addMethod(genDeleteMethod(table, packageName, indexColumns, false));
                 classBuilder.addMethod(genUpdateMethod(table, packageName, indexColumns, false));
                 classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, false));
                 classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, true));
@@ -169,15 +170,17 @@ public class SqlBuilderGenerator {
      *
      * @param table                  table
      * @param userSpecifyPackageName 用户指定的包名
+     * @param whereClauseColumns     删除条件的列
+     * @param primaryKey             <i>whereClauseColumns</i>是否主键
      * @return delete method
      */
-    private MethodSpec genDeleteByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        String methodName = Constant.MAPPER_DELETE_BY_PRIMARY_KEY;
-        Iterable<ParameterSpec> parameterSpecs = MyBatisMapperGeneratorUtil.getPrimaryKeyParameterSpec(table, true);
+    private MethodSpec genDeleteMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getDeleteMethodName(columnNames, primaryKey);
+        Iterable<ParameterSpec> parameterSpecs = MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true);
 
         TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
         String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
-        String primaryKey = TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName();
 
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
         builder.addModifiers(Modifier.PUBLIC, Modifier.STATIC);
@@ -185,23 +188,29 @@ public class SqlBuilderGenerator {
         builder.addParameters(parameterSpecs);
         builder.addStatement("$T sql = new $T()", SQL.class, SQL.class);
         builder.addStatement("sql.DELETE_FROM($T.$L)", tableMetaInfo, schemaDotTable);
-        builder.addStatement("$T.whereConditions(sql, $T.$L)", SqlProviderUtils.class, tableMetaInfo, primaryKey);
+        if (primaryKey) {
+            String primaryKeyFieldName = TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName();
+            builder.addStatement("$T.whereConditions(sql, $T.$L)", SqlProviderUtils.class, tableMetaInfo, primaryKeyFieldName);
+        } else {
+            String whereClauseColumnQuotingString = SqlProviderUtils.toDoubleQuotedString(columnNames);
+            builder.addStatement("$T.whereConditions(sql, $L)", SqlProviderUtils.class, whereClauseColumnQuotingString);
+        }
         builder.addStatement("return sql.toString()");
         return builder.build();
     }
 
     /**
-     * 为{@link #genDeleteByPrimaryKeyMethod(Table, String)}提供方法提的模板.
+     * 为{@link #genDeleteMethod(Table, String, List, boolean)}提供方法提的模板.
      *
-     * @param schemaDotTable    schema.table
-     * @param primaryKeyColumns primary key columns
+     * @param schemaDotTable     schema.table
+     * @param whereClauseColumns 删除使用的条件
      * @return sql
      */
     @SuppressWarnings("unused")
-    private String deleteByPrimaryKeyMethodStatementTemplate(String schemaDotTable, String... primaryKeyColumns) {
+    private String deleteByPrimaryKeyMethodStatementTemplate(String schemaDotTable, String... whereClauseColumns) {
         SQL sql = new SQL();
         sql.DELETE_FROM(schemaDotTable);
-        SqlProviderUtils.whereConditions(sql, primaryKeyColumns);
+        SqlProviderUtils.whereConditions(sql, whereClauseColumns);
         return sql.toString();
     }
 

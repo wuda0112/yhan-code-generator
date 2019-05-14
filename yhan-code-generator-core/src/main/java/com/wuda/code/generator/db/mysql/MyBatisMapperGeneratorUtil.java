@@ -48,18 +48,6 @@ class MyBatisMapperGeneratorUtil {
     }
 
     /**
-     * 主键中的列生成方法的输入参数.
-     *
-     * @param table                  table
-     * @param mybatisParamAnnotation 是否在参数前添加{@link org.apache.ibatis.annotations.Param}注解
-     * @return 输入参数定义
-     */
-    static Iterable<ParameterSpec> getPrimaryKeyParameterSpec(Table table, boolean mybatisParamAnnotation) {
-        List<Column> primaryKeyColumns = table.primaryKeyColumns();
-        return getParameterSpecs(primaryKeyColumns, mybatisParamAnnotation);
-    }
-
-    /**
      * 用给定的列生成方法的输入参数.
      *
      * @param columns                column
@@ -223,6 +211,24 @@ class MyBatisMapperGeneratorUtil {
             methodName.append(Constant.MAPPER_UPDATE_BY_PRIMARY_KEY);
         } else {
             methodName.append(Constant.UPDATE_BY_PREFIX);
+            andSeparated(whereClauseColumns, methodName);
+        }
+        return methodName.toString();
+    }
+
+    /**
+     * 根据<i>WHERE</i>条件中的列生成方法名.
+     *
+     * @param whereClauseColumns where条件中的所有column
+     * @param primaryKey         这些column是否组成主键
+     * @return 对应的方法名
+     */
+    static String getDeleteMethodName(List<String> whereClauseColumns, boolean primaryKey) {
+        StringBuilder methodName = new StringBuilder();
+        if (primaryKey) {
+            methodName.append(Constant.MAPPER_DELETE_BY_PRIMARY_KEY);
+        } else {
+            methodName.append(Constant.DELETE_BY_PREFIX);
             andSeparated(whereClauseColumns, methodName);
         }
         return methodName.toString();

@@ -101,4 +101,9 @@ public class Constant {
      */
     public final static String UPDATE_BY_PREFIX = "updateBy";
 
+    /**
+     * deleteBy前缀.
+     */
+    public final static String DELETE_BY_PREFIX = "deleteBy";
+
 }

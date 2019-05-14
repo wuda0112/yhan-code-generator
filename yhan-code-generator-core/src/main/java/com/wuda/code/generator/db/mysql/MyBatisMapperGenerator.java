@@ -43,7 +43,7 @@ public class MyBatisMapperGenerator {
         }
         // 主键
         List<Column> primaryKeyColumns = table.primaryKeyColumns();
-        classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
+        classBuilder.addMethod(genDeleteMethod(table, packageName, primaryKeyColumns, true));
         classBuilder.addMethod(genUpdateMethod(table, packageName, primaryKeyColumns, true));
         classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, false));
         classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, true));
@@ -54,6 +54,7 @@ public class MyBatisMapperGenerator {
         if (uniqueIndices != null && !uniqueIndices.isEmpty()) {
             for (Index index : uniqueIndices) {
                 List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
+                classBuilder.addMethod(genDeleteMethod(table, packageName, indexColumns, false));
                 classBuilder.addMethod(genUpdateMethod(table, packageName, indexColumns, false));
                 classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, false));
                 classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, true));
@@ -207,20 +208,24 @@ public class MyBatisMapperGenerator {
     }
 
     /**
-     * 生成delete by primary key方法.
+     * 生成delete方法.
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
+     * @param whereClauseColumns     删除条件的列
+     * @param primaryKey             <i>whereClauseColumns</i>是否主键
      * @return method
      */
-    private MethodSpec genDeleteByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
+    private MethodSpec genDeleteMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getDeleteMethodName(columnNames, primaryKey);
         AnnotationSpec annotationSpec = MybatisFrameworkUtils.getDeleteProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
-                Constant.MAPPER_DELETE_BY_PRIMARY_KEY);
-        return MethodSpec.methodBuilder(Constant.MAPPER_DELETE_BY_PRIMARY_KEY)
+                methodName);
+        return MethodSpec.methodBuilder(methodName)
                 .addAnnotation(annotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
-                .addParameters(MyBatisMapperGeneratorUtil.getPrimaryKeyParameterSpec(table, true))
+                .addParameters(MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true))
                 .build();
     }
 
