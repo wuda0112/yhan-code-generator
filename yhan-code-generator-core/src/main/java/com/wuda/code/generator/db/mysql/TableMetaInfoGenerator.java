@@ -6,7 +6,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
-import com.wuda.yhan.code.generator.lang.relational.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 
 import javax.lang.model.element.Modifier;

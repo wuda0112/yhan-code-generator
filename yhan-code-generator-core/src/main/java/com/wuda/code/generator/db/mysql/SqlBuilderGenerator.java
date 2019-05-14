@@ -8,7 +8,7 @@ import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.TableEntity;
 import com.wuda.yhan.code.generator.lang.TableEntityUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
-import com.wuda.yhan.code.generator.lang.relational.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 import org.apache.ibatis.jdbc.SQL;

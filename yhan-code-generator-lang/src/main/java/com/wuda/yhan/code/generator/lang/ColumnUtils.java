@@ -1,11 +1,15 @@
-package com.wuda.yhan.code.generator.lang.relational;
+package com.wuda.yhan.code.generator.lang;
+
+import com.wuda.yhan.code.generator.lang.relational.Column;
+import com.wuda.yhan.code.generator.lang.relational.Index;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * column工具类.
+ * {@link Column}的工具类.
  *
  * @author wuda
  */
