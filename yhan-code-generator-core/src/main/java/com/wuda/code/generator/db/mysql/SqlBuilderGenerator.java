@@ -32,7 +32,7 @@ public class SqlBuilderGenerator {
         String className = SqlBuilderGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
-        
+
         classBuilder.addMethod(genInsertMethod(table, packageName));
         MethodSpec batchInsertUseGeneratedKeys = genBatchInsertUseGeneratedKeysMethod(table, packageName);
         if (batchInsertUseGeneratedKeys != null) {
@@ -52,6 +52,7 @@ public class SqlBuilderGenerator {
                 List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
                 classBuilder.addMethod(genUpdateMethod(table, packageName, indexColumns, false));
                 classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, false));
+                classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, true));
                 classBuilder.addMethod(genBatchSelectMethod(table, packageName, indexColumns, false));
             }
         }
@@ -288,8 +289,8 @@ public class SqlBuilderGenerator {
      * @return 查询方法
      */
     private MethodSpec genSelectMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, boolean forUpdate) {
-        if (!primaryKey && forUpdate) {
-            throw new CodeGenerateException("暂时不支持在非主键字段上生成forUpdate语法的查询方法");
+        if ((!primaryKey && !uniqueIndex) && forUpdate) {
+            throw new CodeGenerateException("select...for update语法的查询必须在主键或者唯一索引字段上才生成");
         }
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getSelectMethodName(columnNames, primaryKey, forUpdate);

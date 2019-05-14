@@ -56,6 +56,7 @@ public class MyBatisMapperGenerator {
                 List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
                 classBuilder.addMethod(genUpdateMethod(table, packageName, indexColumns, false));
                 classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, false));
+                classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, true));
                 classBuilder.addMethod(genBatchSelectMethod(table, packageName, indexColumns, false));
             }
         }
