@@ -7,6 +7,7 @@ import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.IsSetField;
 import com.wuda.yhan.util.commons.JavaNamingUtil;
 import com.wuda.yhan.util.commons.StringUtil;
+import org.apache.ibatis.annotations.Param;
 
 /**
  * {@link EntityGenerator}生成代码时,命名工具类.
@@ -53,13 +54,18 @@ class EntityGeneratorUtil {
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
      * @return 参数信息
      */
-    static ParameterSpec getEntityParameter(Table table, String userSpecifyPackageName) {
+    static ParameterSpec getEntityParameter(Table table, String userSpecifyPackageName, boolean mybatisParamAnnotation) {
         String entityName = EntityGeneratorUtil.toClassName(table.id().table());
         String parameterName = StringUtil.firstCharToLowerCase(entityName);
         TypeName typeName = getTypeName(table, userSpecifyPackageName);
-        return ParameterSpec.builder(typeName, parameterName).build();
+        ParameterSpec.Builder builder = ParameterSpec.builder(typeName, parameterName);
+        if (mybatisParamAnnotation) {
+            builder.addAnnotation(MybatisFrameworkUtils.getParamAnnotationSpec(parameterName));
+        }
+        return builder.build();
     }
 
     /**

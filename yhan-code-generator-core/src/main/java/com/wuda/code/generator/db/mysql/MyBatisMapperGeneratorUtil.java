@@ -210,6 +210,24 @@ class MyBatisMapperGeneratorUtil {
         return builder.toString();
     }
 
+    /**
+     * 根据<i>WHERE</i>条件中的列生成方法名.
+     *
+     * @param whereClauseColumns where条件中的所有column
+     * @param primaryKey         这些column是否组成主键
+     * @return 对应的方法名
+     */
+    static String getUpdateMethodName(List<String> whereClauseColumns, boolean primaryKey) {
+        StringBuilder methodName = new StringBuilder();
+        if (primaryKey) {
+            methodName.append(Constant.MAPPER_UPDATE_BY_PRIMARY_KEY);
+        } else {
+            methodName.append(Constant.UPDATE_BY_PREFIX);
+            andSeparated(whereClauseColumns, methodName);
+        }
+        return methodName.toString();
+    }
+
     private static void andSeparated(List<String> whereClauseColumns, StringBuilder appender) {
         int last = whereClauseColumns.size() - 1;
         String column;

@@ -105,9 +105,10 @@ public class SqlProviderUtils {
      *
      * @param sql                  {@link SQL}
      * @param fieldToColumn        key是属性名称,value是属性对应的数据库表的列名
+     * @param parameterName        参数名称,Mybatis的参数名称
      * @param exclusiveWhereClause 排除更新条件.比如根据主键更新时,主键字段也设置了值,但是主键是作为条件,而不是更新字段,必须排除
      */
-    public static void updateSetColumnsAndValues(SQL sql, Map<String, String> fieldToColumn, String... exclusiveWhereClause) {
+    public static void updateSetColumnsAndValues(SQL sql, Map<String, String> fieldToColumn, String parameterName, String... exclusiveWhereClause) {
         Set<Map.Entry<String, String>> entrySet = fieldToColumn.entrySet();
         String column;
         String field;
@@ -117,7 +118,7 @@ public class SqlProviderUtils {
                 continue;
             }
             field = entry.getKey();
-            sql.SET(column + "=#{" + field + "}");
+            sql.SET(column + "=#{" + parameterName + "." + field + "}");
         }
     }
 

@@ -96,4 +96,9 @@ public class Constant {
      */
     public final static String FOR_UPDATE_STATEMENT = "FOR UPDATE";
 
+    /**
+     * updateBy前缀.
+     */
+    public final static String UPDATE_BY_PREFIX = "updateBy";
+
 }

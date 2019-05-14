@@ -1,14 +1,14 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
-import com.wuda.yhan.code.generator.lang.Constant;
-import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.TableUtils;
+import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 
 import javax.lang.model.element.Modifier;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,6 +30,7 @@ public class MyBatisMapperGenerator {
         TypeSpec.Builder classBuilder = TypeSpec.interfaceBuilder(className);
         classBuilder.addAnnotation(MybatisFrameworkUtils.genMapperAnnotation());
         classBuilder.addModifiers(Modifier.PUBLIC);
+
         classBuilder.addMethod(genInsertMethod(table, packageName, false));
         MethodSpec insertUseGeneratedKeys = genInsertMethod(table, packageName, true);
         if (insertUseGeneratedKeys != null) {
@@ -40,15 +41,34 @@ public class MyBatisMapperGenerator {
         if (batchInsertUseGeneratedKeys != null) {
             classBuilder.addMethod(batchInsertUseGeneratedKeys);
         }
+        // 主键
+        List<Column> primaryKeyColumns = table.primaryKeyColumns();
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
-        classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
-        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, false));
-        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, true));
-        classBuilder.addMethod(genBatchSelectMethod(table, table.primaryKeyColumns(), true, packageName));
-        Iterable<MethodSpec> selectByIndexMethods = genSelectByIndexMethod(table, packageName);
-        if (selectByIndexMethods != null) {
-            classBuilder.addMethods(selectByIndexMethods);
+        classBuilder.addMethod(genUpdateMethod(table, packageName, primaryKeyColumns, true));
+        classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, false));
+        classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, true));
+        classBuilder.addMethod(genBatchSelectMethod(table, packageName, primaryKeyColumns, true));
+
+        // 唯一索引
+        List<Index> uniqueIndices = TableUtils.getUniqueIndices(table);
+        if (uniqueIndices != null && !uniqueIndices.isEmpty()) {
+            for (Index index : uniqueIndices) {
+                List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
+                classBuilder.addMethod(genUpdateMethod(table, packageName, indexColumns, false));
+                classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, false));
+                classBuilder.addMethod(genBatchSelectMethod(table, packageName, indexColumns, false));
+            }
         }
+        // 非唯一索引
+        List<Index> nonUniqueIndices = TableUtils.getNonUniqueIndices(table);
+        if (nonUniqueIndices != null && !nonUniqueIndices.isEmpty()) {
+            for (Index index : nonUniqueIndices) {
+                List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
+                classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, false, false));
+                classBuilder.addMethod(genSelectCountMethod(table, packageName, indexColumns));
+            }
+        }
+
         String finalPackageName = PackageNameUtil.getMapperPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
@@ -71,7 +91,7 @@ public class MyBatisMapperGenerator {
         } else {
             methodName = Constant.MAPPER_INSERT;
         }
-        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
+        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName, false);
         AnnotationSpec insertProviderAnnotationSpec = MybatisFrameworkUtils.getInsertProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
                 Constant.MAPPER_INSERT);
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
@@ -208,59 +228,24 @@ public class MyBatisMapperGenerator {
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
+     * @param whereClauseColumns     更新条件的列
+     * @param primaryKey             <i>whereClauseColumns</i>是否主键
      * @return update method
      */
-    private MethodSpec genUpdateByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        String methodName = Constant.MAPPER_UPDATE_BY_PRIMARY_KEY;
-        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
-        AnnotationSpec annotationSpec = MybatisFrameworkUtils.getUpdateProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
-                Constant.MAPPER_UPDATE_BY_PRIMARY_KEY);
+    private MethodSpec genUpdateMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getUpdateMethodName(columnNames, primaryKey);
+        Iterable<ParameterSpec> conditionsParameterSpec = MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true);
+        ParameterSpec updateParameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName, true);
+        AnnotationSpec updateProviderAnnotationSpec = MybatisFrameworkUtils.getUpdateProviderAnnotationSpec(SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName),
+                methodName);
         return MethodSpec.methodBuilder(methodName)
-                .addAnnotation(annotationSpec)
+                .addAnnotation(updateProviderAnnotationSpec)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(TypeName.INT)
-                .addParameter(parameterSpec)
+                .addParameters(conditionsParameterSpec)
+                .addParameter(updateParameterSpec)
                 .build();
-    }
-
-    /**
-     * 生成select by primary key方法.
-     *
-     * @param table                  table
-     * @param userSpecifyPackageName package name
-     * @param forUpdate              SELECT ... FOR UPDATE
-     * @return method
-     */
-    private MethodSpec genSelectByPrimaryKeyMethod(Table table, String userSpecifyPackageName, boolean forUpdate) {
-        return genSelectMethod(table, userSpecifyPackageName, table.primaryKeyColumns(), true, false, forUpdate);
-    }
-
-    /**
-     * 具体查看{@link SqlBuilderGenerator#genSelectByIndexMethodSpec(Table, String)}定义.
-     *
-     * @param table                  table
-     * @param userSpecifyPackageName user specify package name
-     * @return list of {@link MethodSpec}
-     */
-    private Iterable<MethodSpec> genSelectByIndexMethod(Table table, String userSpecifyPackageName) {
-        List<Index> indices = table.getIndices();
-        if (indices == null || indices.isEmpty()) {
-            return null;
-        }
-        List<MethodSpec> methods = new ArrayList<>(indices.size());
-        for (Index index : indices) {
-            List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
-            MethodSpec methodSpec = genSelectMethod(table, userSpecifyPackageName, indexColumns, false, index.getType() == Index.Type.UNIQUE, false);
-            methods.add(methodSpec);
-            if (index.getType() != Index.Type.UNIQUE) {
-                MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);
-                methods.add(selectCountMethodSpec);
-            } else {
-                MethodSpec batchSelectMethod = genBatchSelectMethod(table, indexColumns, false, userSpecifyPackageName);
-                methods.add(batchSelectMethod);
-            }
-        }
-        return methods;
     }
 
     /**
@@ -302,14 +287,14 @@ public class MyBatisMapperGenerator {
 
     /**
      * 生成<code>SELECT COUNT</code>方法,用于获取总数.
-     * 具体查看{@link SqlBuilderGenerator#genSelectCountMethod(Table, List, String)}方法的定义.
+     * 具体查看{@link SqlBuilderGenerator#genSelectCountMethod(Table, String, List)}方法的定义.
      *
      * @param table                  table
-     * @param whereClauseColumns     where clause columns
      * @param userSpecifyPackageName user specify package name
+     * @param whereClauseColumns     where clause columns
      * @return {@link MethodSpec}
      */
-    private MethodSpec genSelectCountMethod(Table table, List<Column> whereClauseColumns, String userSpecifyPackageName) {
+    private MethodSpec genSelectCountMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getSelectCountMethodName(columnNames);
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
@@ -324,15 +309,15 @@ public class MyBatisMapperGenerator {
 
     /**
      * 生成批量查询方法.
-     * 具体查看{@link SqlBuilderGenerator#genBatchSelectMethod(Table, List, boolean, String)}方法的定义.
+     * 具体查看{@link SqlBuilderGenerator#genBatchSelectMethod(Table, String, List, boolean)}方法的定义.
      *
      * @param table                  table
+     * @param userSpecifyPackageName user specify package name
      * @param whereClauseColumns     where clause columns
      * @param primaryKey             是否主键
-     * @param userSpecifyPackageName user specify package name
      * @return 方法定义
      */
-    private MethodSpec genBatchSelectMethod(Table table, List<Column> whereClauseColumns, boolean primaryKey, String userSpecifyPackageName) {
+    private MethodSpec genBatchSelectMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getBatchSelectMethodName(columnNames, primaryKey);
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);

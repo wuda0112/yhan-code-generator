@@ -3,12 +3,8 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.CodeGenerateException;
 import com.wuda.code.generator.TypeNameUtils;
-import com.wuda.yhan.code.generator.lang.Constant;
-import com.wuda.yhan.code.generator.lang.SqlProviderUtils;
-import com.wuda.yhan.code.generator.lang.TableEntity;
-import com.wuda.yhan.code.generator.lang.TableEntityUtils;
+import com.wuda.yhan.code.generator.lang.*;
 import com.wuda.yhan.code.generator.lang.relational.Column;
-import com.wuda.yhan.code.generator.lang.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 import org.apache.ibatis.jdbc.SQL;
@@ -36,16 +32,37 @@ public class SqlBuilderGenerator {
         String className = SqlBuilderGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+        
         classBuilder.addMethod(genInsertMethod(table, packageName));
-        classBuilder.addMethod(genBatchInsertUseGeneratedKeysMethod(table, packageName));
+        MethodSpec batchInsertUseGeneratedKeys = genBatchInsertUseGeneratedKeysMethod(table, packageName);
+        if (batchInsertUseGeneratedKeys != null) {
+            classBuilder.addMethod(batchInsertUseGeneratedKeys);
+        }
+        // 主键
+        List<Column> primaryKeyColumns = table.primaryKeyColumns();
         classBuilder.addMethod(genDeleteByPrimaryKeyMethod(table, packageName));
-        classBuilder.addMethod(genUpdateByPrimaryKeyMethod(table, packageName));
-        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, false));
-        classBuilder.addMethod(genSelectByPrimaryKeyMethod(table, packageName, true));
-        classBuilder.addMethod(genBatchSelectMethod(table, table.primaryKeyColumns(), true, packageName));
-        Iterable<MethodSpec> selectByIndexMethods = genSelectByIndexMethodSpec(table, packageName);
-        if (selectByIndexMethods != null) {
-            classBuilder.addMethods(selectByIndexMethods);
+        classBuilder.addMethod(genUpdateMethod(table, packageName, primaryKeyColumns, true));
+        classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, false));
+        classBuilder.addMethod(genSelectMethod(table, packageName, primaryKeyColumns, true, false, true));
+        classBuilder.addMethod(genBatchSelectMethod(table, packageName, primaryKeyColumns, true));
+        // 唯一索引
+        List<Index> uniqueIndices = TableUtils.getUniqueIndices(table);
+        if (uniqueIndices != null && !uniqueIndices.isEmpty()) {
+            for (Index index : uniqueIndices) {
+                List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
+                classBuilder.addMethod(genUpdateMethod(table, packageName, indexColumns, false));
+                classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, true, false));
+                classBuilder.addMethod(genBatchSelectMethod(table, packageName, indexColumns, false));
+            }
+        }
+        // 非唯一索引
+        List<Index> nonUniqueIndices = TableUtils.getNonUniqueIndices(table);
+        if (nonUniqueIndices != null && !nonUniqueIndices.isEmpty()) {
+            for (Index index : nonUniqueIndices) {
+                List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
+                classBuilder.addMethod(genSelectMethod(table, packageName, indexColumns, false, false, false));
+                classBuilder.addMethod(genSelectCountMethod(table, packageName, indexColumns));
+            }
         }
         String finalPackageName = PackageNameUtil.getMapperPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
@@ -60,7 +77,7 @@ public class SqlBuilderGenerator {
      */
     private MethodSpec genInsertMethod(Table table, String userSpecifyPackageName) {
         String methodName = Constant.MAPPER_INSERT;
-        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
+        ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName, false);
 
         TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
         String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
@@ -108,6 +125,9 @@ public class SqlBuilderGenerator {
      * @return insert method
      */
     private MethodSpec genBatchInsertUseGeneratedKeysMethod(Table table, String userSpecifyPackageName) {
+        if (ColumnUtils.getAutoIncrementColumn(table) == null) {
+            return null;
+        }
         String methodName = Constant.MAPPER_BATCH_INSERT_USE_GENERATED_KEYS;
         ParameterSpec parameterSpec = EntityGeneratorUtil.getEntityListParameter(table, userSpecifyPackageName);
 
@@ -186,67 +206,71 @@ public class SqlBuilderGenerator {
 
     /**
      * generate update method.
+     * 没有限制更新的条件必须是主键,可以根据任何字段生成更新方法.
      *
      * @param table                  table
      * @param userSpecifyPackageName package name
+     * @param whereClauseColumns     更新条件的列
+     * @param primaryKey             <i>whereClauseColumns</i>是否主键
      * @return update method
      */
-    private MethodSpec genUpdateByPrimaryKeyMethod(Table table, String userSpecifyPackageName) {
-        String methodName = Constant.MAPPER_UPDATE_BY_PRIMARY_KEY;
+    private MethodSpec genUpdateMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey) {
+        List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
+        String methodName = MyBatisMapperGeneratorUtil.getUpdateMethodName(columnNames, primaryKey);
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName);
-        ParameterSpec entityParameter = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName);
+        Iterable<ParameterSpec> conditionsParameterSpec = MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true);
+        ParameterSpec updateParameterSpec = EntityGeneratorUtil.getEntityParameter(table, userSpecifyPackageName, true);
 
         TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
         String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
-        String primaryKey = TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName();
+        String primaryKeyFieldName = TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName();
 
         ParameterizedTypeName mapOfString = TypeNameUtils.mapOf(String.class, String.class);
 
         builder.addModifiers(Modifier.PUBLIC, Modifier.STATIC);
         builder.returns(String.class);
-        builder.addParameter(entityParameter);
-        builder.addStatement("$T.validate($L)", SqlProviderUtils.class, entityParameter.name);
-        builder.addStatement("$T setterCalledFieldToColumnMap = $T.fieldToColumn($L,$L)", mapOfString, TableEntityUtils.class, entityParameter.name, true);
-        builder.addStatement("$T.setterCalledFieldValidate($L,setterCalledFieldToColumnMap)", SqlProviderUtils.class, entityParameter.name);
+        builder.addParameters(conditionsParameterSpec);
+        builder.addParameter(updateParameterSpec);
+        builder.addStatement("$T.validate($L)", SqlProviderUtils.class, updateParameterSpec.name);
+        builder.addStatement("$T setterCalledFieldToColumnMap = $T.fieldToColumn($L,$L)", mapOfString, TableEntityUtils.class, updateParameterSpec.name, true);
+        builder.addStatement("$T.setterCalledFieldValidate($L,setterCalledFieldToColumnMap)", SqlProviderUtils.class, updateParameterSpec.name);
         builder.addStatement("$T sql = new $T()", SQL.class, SQL.class);
         builder.addStatement("sql.UPDATE($T.$L)", tableMetaInfo, schemaDotTable);
-        builder.addStatement("$T.updateSetColumnsAndValues(sql,setterCalledFieldToColumnMap,$T.$L)", SqlProviderUtils.class, tableMetaInfo, primaryKey);
-        builder.addStatement("$T.whereConditions(sql, $T.$L)", SqlProviderUtils.class, tableMetaInfo, primaryKey);
+        if (primaryKey) {
+            builder.addStatement("$T.updateSetColumnsAndValues(sql,setterCalledFieldToColumnMap,$S,$T.$L)", SqlProviderUtils.class, updateParameterSpec.name, tableMetaInfo, primaryKeyFieldName);
+            builder.addStatement("$T.whereConditions(sql, $T.$L)", SqlProviderUtils.class, tableMetaInfo, primaryKeyFieldName);
+        } else {
+            List<String> list = new ArrayList<>(table.primaryKeyColumnNames().size() + columnNames.size());
+            list.addAll(table.primaryKeyColumnNames());
+            list.addAll(columnNames);
+            String exclusiveColumnQuotingString = SqlProviderUtils.toDoubleQuotedString(list);
+            builder.addStatement("$T.updateSetColumnsAndValues(sql,setterCalledFieldToColumnMap,$S,$L)", SqlProviderUtils.class, updateParameterSpec.name, exclusiveColumnQuotingString);
+            String whereClauseColumnQuotingString = SqlProviderUtils.toDoubleQuotedString(columnNames);
+            builder.addStatement("$T.whereConditions(sql, $L)", SqlProviderUtils.class, whereClauseColumnQuotingString);
+        }
         builder.addStatement("return sql.toString()");
         return builder.build();
     }
 
     /**
-     * 为{@link #genUpdateByPrimaryKeyMethod(Table, String)}提供方法体模板.
+     * 为{@link #genUpdateMethod(Table, String, List, boolean)}提供方法体模板.
      *
-     * @param schemaDotTable    schema.table
-     * @param entity            表对应的实体
-     * @param primaryKeyColumns primary key columns
+     * @param schemaDotTable     schema.table
+     * @param entity             表对应的实体
+     * @param parameterName      参数名称,Mybatis的参数名称
+     * @param whereClauseColumns 更新条件的列
      * @return sql
      */
     @SuppressWarnings("unused")
-    private String updateByPrimaryKeyMethodStatementTemplate(String schemaDotTable, TableEntity entity, String... primaryKeyColumns) {
+    private String updateMethodStatementTemplate(String schemaDotTable, TableEntity entity, String parameterName, String... whereClauseColumns) {
         SqlProviderUtils.validate(entity);
         Map<String, String> setterCalledFieldToColumnMap = TableEntityUtils.fieldToColumn(entity, true);
         SqlProviderUtils.setterCalledFieldValidate(entity, setterCalledFieldToColumnMap);
         SQL sql = new SQL();
         sql.UPDATE(schemaDotTable);
-        SqlProviderUtils.updateSetColumnsAndValues(sql, setterCalledFieldToColumnMap, primaryKeyColumns);
-        SqlProviderUtils.whereConditions(sql, primaryKeyColumns);
+        SqlProviderUtils.updateSetColumnsAndValues(sql, setterCalledFieldToColumnMap, parameterName, whereClauseColumns);
+        SqlProviderUtils.whereConditions(sql, whereClauseColumns);
         return sql.toString();
-    }
-
-    /**
-     * generate select by primary key method.
-     *
-     * @param table                  table
-     * @param userSpecifyPackageName 用户指定的包名
-     * @param forUpdate              SELECT ... FOR UPDATE
-     * @return select by primary method
-     */
-    private MethodSpec genSelectByPrimaryKeyMethod(Table table, String userSpecifyPackageName, boolean forUpdate) {
-        List<Column> primaryKeyColumns = table.primaryKeyColumns();
-        return genSelectMethod(table, userSpecifyPackageName, primaryKeyColumns, true, false, forUpdate);
     }
 
     /**
@@ -345,11 +369,11 @@ public class SqlBuilderGenerator {
      * 不过最好还是在有索引的列上生成查询方法.
      *
      * @param table                  table
-     * @param whereClauseColumns     sql查询语句中where条件的列
      * @param userSpecifyPackageName 用户指定的包名称
+     * @param whereClauseColumns     sql查询语句中where条件的列
      * @return 查询方法
      */
-    private MethodSpec genSelectCountMethod(Table table, List<Column> whereClauseColumns, String userSpecifyPackageName) {
+    private MethodSpec genSelectCountMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getSelectCountMethodName(columnNames);
 
@@ -374,7 +398,7 @@ public class SqlBuilderGenerator {
     }
 
     /**
-     * 为{@link #genSelectCountMethod(Table, List, String)}提供方法体模板.
+     * 为{@link #genSelectCountMethod(Table, String, List)}提供方法体模板.
      *
      * @param schemaDotTable     schema.table
      * @param whereClauseColumns where条件中的columns
@@ -392,69 +416,18 @@ public class SqlBuilderGenerator {
     }
 
     /**
-     * 根据表中定义的索引(不包含主键)生成对应的满足索引的查询方法.
-     * 每个索引对应一个查询的方法.
-     * <p>
-     * 方法名的定义如下
-     * <ul>
-     * <li>如果是主键,方法名是{@link Constant#MAPPER_SELECT_BY_PRIMARY_KEY}</li>
-     * <li>非主键索引,把索引中的字段用"And"连接起来,再加上<i>selectBy</i>前缀.
-     * </ul>
-     * 方法输入参数的定义如下
-     * <ul>
-     * <li><i>WHERE</i>条件中的字段,一定是组成索引的列</li>
-     * <li>返回的列</li>
-     * <li>分页参数,如果是唯一索引,则没有分页参数,其他都有分页相关的参数</li>
-     * </ul>
-     * 方法返回值的定义如下
-     * <ul>
-     * <li>如果是唯一索引(包含主键)则返回单个实体,其他都返回实体的集合,list of entity.</li>
-     * </ul>
-     * </p>
-     * 举例,一个非主键普通索引由<i>store_id</i>和<i>is_deleted</i>两个字段组成,
-     * 那么生成的查询方法定义伪代码是
-     * <pre>
-     * public List<TableEntity> selectByStoreIdAndIsDeleted(Long storeId,boolean isDeleted,String[] retrieveColumns,int offset,int limit);
-     * </pre>
-     *
-     * @param table                  数据库中表的定义
-     * @param userSpecifyPackageName 包名称
-     * @return 所有索引对应的查询方法
-     */
-    private Iterable<MethodSpec> genSelectByIndexMethodSpec(Table table, String userSpecifyPackageName) {
-        List<Index> indices = table.getIndices();
-        if (indices == null || indices.isEmpty()) {
-            return null;
-        }
-        List<MethodSpec> methods = new ArrayList<>(indices.size());
-        for (Index index : indices) {
-            List<Column> indexColumns = ColumnUtils.indexColumns(table, index);
-            MethodSpec methodSpec = genSelectMethod(table, userSpecifyPackageName, indexColumns, false, index.getType() == Index.Type.UNIQUE, false);
-            methods.add(methodSpec);
-            if (index.getType() != Index.Type.UNIQUE) {
-                MethodSpec selectCountMethodSpec = genSelectCountMethod(table, indexColumns, userSpecifyPackageName);
-                methods.add(selectCountMethodSpec);
-            } else {
-                MethodSpec batchSelectMethod = genBatchSelectMethod(table, indexColumns, false, userSpecifyPackageName);
-                methods.add(batchSelectMethod);
-            }
-        }
-        return methods;
-    }
-
-    /**
      * 给定Table和Where条件字段,生成此表上相应的批量查询方法,类似于Mybatis foreach语法.
      * 这里没有强制要求给定的列必须有索引,
      * 所以可以生成此表上任何列的查询方法,
      * 不过最好还是在有索引的列上生成查询方法.
      *
      * @param table                  table
+     * @param userSpecifyPackageName 用户指定的包名称
      * @param whereClauseColumns     sql查询语句中where条件的列
      * @param primaryKey             给定的这些列是否组成主键
-     * @param userSpecifyPackageName 用户指定的包名称
      * @return 查询方法
      */
-    private MethodSpec genBatchSelectMethod(Table table, List<Column> whereClauseColumns, boolean primaryKey, String userSpecifyPackageName) {
+    private MethodSpec genBatchSelectMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
         String methodName = MyBatisMapperGeneratorUtil.getBatchSelectMethodName(columnNames, primaryKey);
 
@@ -488,7 +461,7 @@ public class SqlBuilderGenerator {
     }
 
     /**
-     * 为{@link #genBatchSelectMethod(Table, List, boolean, String)}提供方法体模板.
+     * 为{@link #genBatchSelectMethod(Table, String, List, boolean)}提供方法体模板.
      *
      * @param schemaDotTable     schema.table
      * @param collectionName     集合名称,类似Mybatis foreach中的collection
