@@ -27,6 +27,11 @@ public class Column implements io.debezium.relational.Column {
         this.actualColumn = actualColumn;
     }
 
+    /**
+     * 注释.
+     */
+    private String comment;
+
     @Override
     public String name() {
         return actualColumn.name();
@@ -100,6 +105,24 @@ public class Column implements io.debezium.relational.Column {
     @Override
     public ColumnEditor edit() {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * 获取列的注释.
+     *
+     * @return 注释
+     */
+    public String getComment() {
+        return comment;
+    }
+
+    /**
+     * 设置列的注释.
+     *
+     * @param comment 注释
+     */
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 
     /**

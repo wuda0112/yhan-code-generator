@@ -1,9 +1,11 @@
-package com.wuda.yhan;
+package com.wuda.yhan.code.generator.parser.mysql;
 
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.ast.expr.SQLCharExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
+import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLSelectOrderByItem;
 import com.alibaba.druid.sql.ast.statement.SQLTableElement;
@@ -11,6 +13,7 @@ import com.alibaba.druid.sql.dialect.mysql.ast.MySqlUnique;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlCreateTableStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlTableIndex;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
+import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 import io.debezium.connector.mysql.MySqlDdlParser;
@@ -51,6 +54,7 @@ public class MySqlCreateTableStatementParser {
             return null;
         }
         Map<String, List<Index>> indexMap = indexParse(createTableContent);
+        columnDefinitionParse(createTableContent, tableMap);
         tableAppendIndex(tableMap, indexMap);
         return toTableList(tableMap);
     }
@@ -175,6 +179,61 @@ public class MySqlCreateTableStatementParser {
             }
         }
         return indices;
+    }
+
+    /**
+     * 解析column definition.
+     *
+     * @param createTableContent Create Table DDL 语句,包含多个Create Table语句
+     * @param tableMap           由<i>createTableContent</i>已经解析出来的{@link Table}
+     * @return table name and table indices mapping
+     */
+    private void columnDefinitionParse(String createTableContent, Map<String, Table> tableMap) {
+        List<SQLStatement> statements = parseStatementList(createTableContent);
+        if (statements == null || statements.isEmpty()) {
+            return;
+        }
+        List<MySqlCreateTableStatement> createTableStatements = filterCreateTableStatement(statements);
+        if (createTableStatements == null || createTableStatements.isEmpty()) {
+            return;
+        }
+        for (MySqlCreateTableStatement statement : createTableStatements) {
+            String schemeDotTable = getSchemaDotTable(statement);
+            Table table = tableMap.get(schemeDotTable);
+            List<ColumnDefinition> columnDefinitions = parseColumnDefinition(statement);
+            for (ColumnDefinition columnDefinition : columnDefinitions) {
+                Column column = table.columnWithName(columnDefinition.getColumnName());
+                column.setComment(columnDefinition.getComment());
+            }
+        }
+    }
+
+    /**
+     * 解析这个Create Table语句中column definition信息.
+     *
+     * @param statement 一个表的Create Table Statement
+     * @return 表中所有的column definition
+     */
+    public List<ColumnDefinition> parseColumnDefinition(MySqlCreateTableStatement statement) {
+        List<SQLTableElement> list = statement.getTableElementList();
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        List<ColumnDefinition> definitions = new ArrayList<>();
+        for (SQLTableElement element : list) {
+            if (element instanceof SQLColumnDefinition) {
+                SQLColumnDefinition sqlColumnDefinition = ((SQLColumnDefinition) element);
+                SQLCharExpr sqlCharExpr = (SQLCharExpr) sqlColumnDefinition.getComment();
+                String columnName = SQLUtils.normalize(sqlColumnDefinition.getName().getSimpleName());
+                String comment = null;
+                if (sqlCharExpr != null) {
+                    comment = sqlCharExpr.getText();
+                }
+                ColumnDefinition definition = new ColumnDefinition(columnName, comment);
+                definitions.add(definition);
+            }
+        }
+        return definitions;
     }
 
     private Index newIndex(String indexName, Index.Type indexType, List<SQLSelectOrderByItem> indexColumns) {
