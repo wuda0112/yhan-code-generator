@@ -1,6 +1,6 @@
 package com.wuda.code.generator.db.mysql;
 
-import com.wuda.yhan.MySqlCreateTableStatementParser;
+import com.wuda.yhan.code.generator.parser.mysql.MySqlCreateTableStatementParser;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 
 import java.util.List;

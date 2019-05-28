@@ -2,6 +2,8 @@ package com.wuda.yhan.code.generator.lang.relational;
 
 import lombok.ToString;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -18,6 +20,8 @@ public class Table {
      * 实际的table.
      */
     private io.debezium.relational.Table actualTable;
+
+    private HashMap<String, Column> WRAPPED_COLUMN_CACHE = new HashMap<>();
 
     /**
      * set actual table
@@ -76,13 +80,22 @@ public class Table {
 
 
     public List<Column> columns() {
-        List<io.debezium.relational.Column> columns = actualTable.columns();
-        return Column.wrap(columns);
+        List<io.debezium.relational.Column> actualColumns = actualTable.columns();
+        List<Column> wrappedColumns = new ArrayList<>(actualColumns.size());
+        String columnName;
+        for (io.debezium.relational.Column actualColumn : actualColumns) {
+            columnName = actualColumn.name();
+            wrappedColumns.add(columnWithName(columnName));
+        }
+        return wrappedColumns;
     }
 
     public Column columnWithName(String name) {
-        io.debezium.relational.Column column = actualTable.columnWithName(name);
-        return Column.wrap(column);
+        if (!WRAPPED_COLUMN_CACHE.containsKey(name)) {
+            io.debezium.relational.Column actualColumn = actualTable.columnWithName(name);
+            WRAPPED_COLUMN_CACHE.put(name, Column.wrap(actualColumn));
+        }
+        return WRAPPED_COLUMN_CACHE.get(name);
     }
 
     public String defaultCharsetName() {

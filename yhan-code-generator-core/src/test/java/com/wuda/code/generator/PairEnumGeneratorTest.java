@@ -12,8 +12,8 @@ public class PairEnumGeneratorTest extends GeneratorTestBase {
     @Test
     public void test() {
         PairEnumGenerator<Integer, String> generator = new PairEnumGenerator<>();
-        PairEnumGenerator.EnumElement one = generator.new EnumElement("ONE", 1, "A");
-        PairEnumGenerator.EnumElement two = generator.new EnumElement("TWO", 2, "B");
+        PairEnumGenerator.EnumElement<Integer, String> one = new PairEnumGenerator.EnumElement<>("ONE", 1, "A");
+        PairEnumGenerator.EnumElement<Integer, String> two = new PairEnumGenerator.EnumElement<>("TWO", 2, "B");
         List<PairEnumGenerator.EnumElement> elements = Arrays.asList(one, two);
 //        List<PairEnumGenerator.EnumElement> elements = Collections.emptyList();
         JavaFile javaFile = generator.genJavaFile("com.wuda.code.generator", "TestEnum", elements);

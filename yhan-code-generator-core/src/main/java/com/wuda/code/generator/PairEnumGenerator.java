@@ -23,10 +23,10 @@ import java.util.Map;
  *  }
  * </pre>
  *
- * @param <K> 生成的枚举中code的类型
- * @param <V> 生成的枚举中description的类型
+ * @param <C> 生成的枚举中code的类型
+ * @param <D> 生成的枚举中description的类型
  */
-public class PairEnumGenerator<K, V> {
+public class PairEnumGenerator<C, D> {
 
     private static final String CODE = "code";
     private static final String DESCRIPTION = "description";
@@ -35,36 +35,45 @@ public class PairEnumGenerator<K, V> {
     /**
      * 代表一个枚举元素.
      */
-    class EnumElement implements Map.Entry<K, V> {
+    public static class EnumElement<C, D> implements Map.Entry<C, D> {
 
         /**
          * 作为枚举元素的名称.
          */
         private String name;
-        private K code;
-        private V desc;
+        private C code;
+        private D desc;
 
-        EnumElement(String name, K code, V desc) {
+        public EnumElement(String name, C code, D desc) {
             this.name = name;
             this.code = code;
             this.desc = desc;
         }
 
         @Override
-        public K getKey() {
+        public C getKey() {
             return code;
         }
 
         @Override
-        public V getValue() {
+        public D getValue() {
             return desc;
         }
 
         @Override
-        public V setValue(V value) {
-            V old = desc;
+        public D setValue(D value) {
+            D old = desc;
             this.desc = value;
             return old;
+        }
+
+        /**
+         * 返回元素名称.
+         *
+         * @return 名称
+         */
+        public String getName() {
+            return name;
         }
     }
 

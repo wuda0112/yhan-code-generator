@@ -45,6 +45,23 @@ class PackageNameUtil {
         return packageName;
     }
 
+    /**
+     * 生成mapper的包名.
+     *
+     * @param userSpecifyPackageName 用户指定的包名称
+     * @param schema                 mysql schema
+     * @return 两个相结合以后生成的包名
+     */
+    static String getEnumPackageName(String userSpecifyPackageName, String schema) {
+        String packageName;
+        if (schema != null && !schema.isEmpty()) {
+            packageName = userSpecifyPackageName + ".enums." + dotSeparatedString(schema);
+        } else {
+            packageName = userSpecifyPackageName + ".enums";
+        }
+        return packageName;
+    }
+
     private static String dotSeparatedString(String schema) {
         char dot = '.';
         String str = schema.toLowerCase().replace(Constant.word_separator, dot);

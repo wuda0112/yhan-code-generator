@@ -1,6 +1,7 @@
 package com.wuda.yhan;
 
 import com.wuda.yhan.code.generator.lang.relational.Table;
+import com.wuda.yhan.code.generator.parser.mysql.MySqlCreateTableStatementParser;
 import org.junit.Test;
 
 import java.util.List;

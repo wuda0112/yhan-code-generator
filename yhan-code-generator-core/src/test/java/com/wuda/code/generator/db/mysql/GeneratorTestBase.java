@@ -10,7 +10,7 @@ public class GeneratorTestBase {
     /**
      * 指定包名.
      */
-    String packageName = "com.wuda";
+    String packageName = "io.basex.dao.mysql";
 
     /**
      * 代码存放位置.
