@@ -84,4 +84,15 @@ class PackageNameUtil {
         return table.id().schema() + "." + table.id().table();
     }
 
+    /**
+     * 生成sql table的包名.
+     *
+     * @param userSpecifyPackageName 用户指定的包名称
+     * @param schema                 mysql schema
+     * @return 两个相结合以后生成的包名
+     */
+    static String getSqlTablePackageName(String userSpecifyPackageName, String schema) {
+        return getEntityPackageName(userSpecifyPackageName, schema);
+    }
+
 }

@@ -106,4 +106,29 @@ public class Constant {
      */
     public final static String DELETE_BY_PREFIX = "deleteBy";
 
+    /**
+     * Dynamic SQL where clause provider.
+     */
+    public final static String WHERE_CLAUSE_PROVIDER = "whereClauseProvider";
+    /**
+     * select by example.
+     */
+    public final static String SELECT_LIST_BY_EXAMPLE = "selectListByExample";
+
+    /**
+     * select by example.
+     */
+    public final static String SELECT_ONE_BY_EXAMPLE = "selectOneByExample";
+
+    /**
+     * count by example.
+     */
+    public final static String COUNT_BY_EXAMPLE = "countByExample";
+
+    /**
+     * 每个表的sql table的实例名.
+     */
+    public final static String SQL_TABLE_INSTANCE = "instance";
+
+
 }

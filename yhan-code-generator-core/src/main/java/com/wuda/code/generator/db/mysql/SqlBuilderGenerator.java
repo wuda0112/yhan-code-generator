@@ -8,6 +8,7 @@ import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
 import org.apache.ibatis.jdbc.SQL;
+import org.mybatis.dynamic.sql.where.render.WhereClauseProvider;
 
 import javax.lang.model.element.Modifier;
 import java.util.ArrayList;
@@ -66,6 +67,11 @@ public class SqlBuilderGenerator {
                 classBuilder.addMethod(genSelectCountMethod(table, packageName, indexColumns));
             }
         }
+
+        classBuilder.addMethod(genSelectByExampleMethod(table, packageName, true));
+        classBuilder.addMethod(genSelectByExampleMethod(table, packageName, false));
+        classBuilder.addMethod(genSelectCountByExampleMethod(table, packageName));
+
         String finalPackageName = PackageNameUtil.getMapperPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
@@ -489,6 +495,123 @@ public class SqlBuilderGenerator {
         SqlProviderUtils.whereConditionsForeach(sql, collectionName, collectionSize, whereClauseColumns);
         StringBuilder builder = new StringBuilder();
         sql.usingAppender(builder);
+        return builder.toString();
+    }
+
+    /**
+     * select by example.
+     *
+     * @param table                  table
+     * @param userSpecifyPackageName 用户指定的包名称
+     * @param returnOne              <code>true</code>-如果返回结果只有一条记录，<code>false</code>-如果返回结果是<code>list</code>
+     * @return 查询方法
+     */
+    private MethodSpec genSelectByExampleMethod(Table table, String userSpecifyPackageName, boolean returnOne) {
+        String methodName;
+        if (returnOne) {
+            methodName = Constant.SELECT_ONE_BY_EXAMPLE;
+        } else {
+            methodName = Constant.SELECT_LIST_BY_EXAMPLE;
+        }
+
+        ParameterSpec whereClauseProvider = MyBatisMapperGeneratorUtil.getWhereClauseProviderParameterSpec(true);
+        ParameterSpec retrieveColumnParameter = MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true);
+
+        TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+        String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
+
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(String.class)
+                .addParameter(whereClauseProvider);
+        boolean paging = false;
+        if (!returnOne) {
+            builder.addParameters(MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true));
+            paging = true;
+        }
+        builder.addParameter(retrieveColumnParameter)
+                .addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, retrieveColumnParameter.name)
+                .addStatement("$T sql = new $T()", SQL.class, SQL.class)
+                .addStatement("sql.SELECT($L)", retrieveColumnParameter.name)
+                .addStatement("sql.FROM($T.$L)", tableMetaInfo, schemaDotTable);
+        builder.addStatement("$T builder = new $T()", StringBuilder.class, StringBuilder.class)
+                .addStatement("sql.usingAppender(builder)");
+        builder.addStatement("builder.append($L).append($L.getWhereClause())", SqlProviderUtils.toDoubleQuotedString(" "), whereClauseProvider.name);
+        if (paging) {
+            builder.addStatement("$T.appendPaging(builder)", SqlProviderUtils.class);
+        }
+        builder.addStatement("return builder.toString()");
+        return builder.build();
+    }
+
+    /**
+     * 为{@link #genSelectByExampleMethod}提供方法体模板.
+     *
+     * @param schemaDotTable      schema.table
+     * @param whereClauseProvider {@link org.mybatis.dynamic.sql.where.render.WhereClauseProvider}
+     * @param paging              是否分页
+     * @param columns             需要返回的列
+     * @return sql
+     */
+    @SuppressWarnings("unused")
+    private String selectByExampleMethodStatementTemplate(String schemaDotTable, WhereClauseProvider whereClauseProvider, boolean paging, String... columns) {
+        SqlProviderUtils.selectColumnsValidate(columns);
+        SQL sql = new SQL();
+        sql.SELECT(columns);
+        sql.FROM(schemaDotTable);
+        StringBuilder builder = new StringBuilder();
+        sql.usingAppender(builder);
+        builder.append(" ").append(whereClauseProvider.getWhereClause());
+        if (paging) {
+            SqlProviderUtils.appendPaging(builder);
+        }
+        return builder.toString();
+    }
+
+    /**
+     * select count by example.
+     *
+     * @param table                  table
+     * @param userSpecifyPackageName 用户指定的包名称
+     * @return 查询方法
+     */
+    private MethodSpec genSelectCountByExampleMethod(Table table, String userSpecifyPackageName) {
+        String methodName = Constant.COUNT_BY_EXAMPLE;
+
+        ParameterSpec whereClauseProvider = MyBatisMapperGeneratorUtil.getWhereClauseProviderParameterSpec(true);
+
+        TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+        String schemaDotTable = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName();
+
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(String.class)
+                .addParameter(whereClauseProvider);
+        builder.addStatement("$T sql = new $T()", SQL.class, SQL.class)
+                .addStatement("sql.SELECT($T.COUNT_STATEMENT)", Constant.class)
+                .addStatement("sql.FROM($T.$L)", tableMetaInfo, schemaDotTable);
+        builder.addStatement("$T builder = new $T()", StringBuilder.class, StringBuilder.class)
+                .addStatement("sql.usingAppender(builder)");
+        builder.addStatement("builder.append($L).append($L.getWhereClause())", SqlProviderUtils.toDoubleQuotedString(" "), whereClauseProvider.name);
+        builder.addStatement("return builder.toString()");
+        return builder.build();
+    }
+
+    /**
+     * 为{@link #genSelectCountByExampleMethod}提供方法体模板.
+     *
+     * @param schemaDotTable      schema.table
+     * @param whereClauseProvider where条件中的columns
+     * @return sql
+     */
+    @SuppressWarnings("unused")
+    private String selectCountByExampleMethodStatementTemplate(String schemaDotTable, WhereClauseProvider whereClauseProvider) {
+        SQL sql = new SQL();
+        sql.SELECT(Constant.COUNT_STATEMENT);
+        sql.FROM(schemaDotTable);
+        StringBuilder builder = new StringBuilder();
+        sql.usingAppender(builder);
+        builder.append(" ").append(whereClauseProvider.getWhereClause());
         return builder.toString();
     }
 }

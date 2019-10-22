@@ -3,6 +3,7 @@ package com.wuda.yhan.code.generator.parser.mysql;
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.ast.expr.SQLBinaryOpExpr;
 import com.alibaba.druid.sql.ast.expr.SQLCharExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
 import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
@@ -223,12 +224,21 @@ public class MySqlCreateTableStatementParser {
         for (SQLTableElement element : list) {
             if (element instanceof SQLColumnDefinition) {
                 SQLColumnDefinition sqlColumnDefinition = ((SQLColumnDefinition) element);
-                SQLCharExpr sqlCharExpr = (SQLCharExpr) sqlColumnDefinition.getComment();
-                String columnName = SQLUtils.normalize(sqlColumnDefinition.getName().getSimpleName());
+                SQLExpr sqlExpr = sqlColumnDefinition.getComment();
                 String comment = null;
-                if (sqlCharExpr != null) {
-                    comment = sqlCharExpr.getText();
+                if (sqlExpr instanceof SQLCharExpr) {
+                    SQLCharExpr sqlCharExpr = (SQLCharExpr) sqlColumnDefinition.getComment();
+                    if (sqlCharExpr != null) {
+                        comment = sqlCharExpr.getText();
+                    }
+                } else if (sqlExpr instanceof SQLBinaryOpExpr) {
+                    SQLBinaryOpExpr sqlCharExpr = (SQLBinaryOpExpr) sqlColumnDefinition.getComment();
+                    if (sqlCharExpr != null) {
+                        SQLCharExpr left = (SQLCharExpr) sqlCharExpr.getLeft();
+                        comment = left.getText();
+                    }
                 }
+                String columnName = SQLUtils.normalize(sqlColumnDefinition.getName().getSimpleName());
                 ColumnDefinition definition = new ColumnDefinition(columnName, comment);
                 definitions.add(definition);
             }

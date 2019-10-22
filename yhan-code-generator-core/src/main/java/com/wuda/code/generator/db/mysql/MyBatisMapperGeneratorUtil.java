@@ -1,9 +1,6 @@
 package com.wuda.code.generator.db.mysql;
 
-import com.squareup.javapoet.ArrayTypeName;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.*;
 import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
 import com.wuda.yhan.code.generator.lang.relational.Column;
@@ -11,6 +8,7 @@ import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.util.commons.JavaNamingUtil;
 import com.wuda.yhan.util.commons.StringUtil;
 import org.apache.ibatis.annotations.Param;
+import org.mybatis.dynamic.sql.where.render.WhereClauseProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -246,5 +244,21 @@ class MyBatisMapperGeneratorUtil {
                 appender.append("And");
             }
         }
+    }
+
+    /**
+     * where clause provider.
+     *
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
+     * @return ParameterSpec
+     */
+    static ParameterSpec getWhereClauseProviderParameterSpec(boolean mybatisParamAnnotation) {
+        String parameterName = Constant.WHERE_CLAUSE_PROVIDER;
+        ClassName parameterType = ClassName.get(WhereClauseProvider.class);
+        ParameterSpec.Builder builder = ParameterSpec.builder(parameterType, parameterName);
+        if (mybatisParamAnnotation) {
+            builder.addAnnotation(getParamAnnotationSpec(parameterName));
+        }
+        return builder.build();
     }
 }

@@ -10,7 +10,7 @@ public class GeneratorTestBase {
     /**
      * 指定包名.
      */
-    String packageName = "io.basex.dao.mysql";
+    String packageName = "com.tiduyun.cmp.resource";
 
     /**
      * 代码存放位置.

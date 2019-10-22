@@ -20,8 +20,7 @@ public class MethodSpecUtil {
     /**
      * 为给定的field生成getter方法.
      *
-     * @param fieldSpec
-     *         field
+     * @param fieldSpec field
      * @return getter方法
      */
     public static MethodSpec genGetter(FieldSpec fieldSpec) {
@@ -36,10 +35,8 @@ public class MethodSpecUtil {
     /**
      * 生成setter方法.
      *
-     * @param field
-     *         列对应的属性.
-     * @param hasIsSetField
-     *         此属性是否有对应的{@link IsSetField}属性
+     * @param field         列对应的属性.
+     * @param hasIsSetField 此属性是否有对应的{@link IsSetField}属性
      * @return setter方法
      * @see IsSetField
      */
@@ -54,7 +51,11 @@ public class MethodSpecUtil {
         if (hasIsSetField) {
             // 对应的"IsSet"属性
             String isSetField = StringUtil.addSuffix(fieldName, IsSetField.suffix);
+
+            methodBuilder.beginControlFlow("if ( "  + fieldName + " != null )");
             methodBuilder.addStatement("this." + isSetField + "=true");
+            methodBuilder.endControlFlow();
+
         }
         return methodBuilder.build();
     }

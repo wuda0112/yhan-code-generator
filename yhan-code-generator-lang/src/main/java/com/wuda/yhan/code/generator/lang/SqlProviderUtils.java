@@ -271,4 +271,14 @@ public class SqlProviderUtils {
         }
         return builder.substring(0, builder.length() - 1);
     }
+
+    /**
+     * Returns a string quoting with the {@code "} char.
+     *
+     * @param str string
+     * @return literal
+     */
+    public static String toDoubleQuotedString(String str) {
+        return "\"" + str + "\"";
+    }
 }

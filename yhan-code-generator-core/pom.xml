@@ -41,6 +41,12 @@
             <artifactId>javax.persistence-api</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.mybatis.dynamic-sql</groupId>
+            <artifactId>mybatis-dynamic-sql</artifactId>
+            <version>1.1.2</version>
+        </dependency>
+
     </dependencies>
 
     <build>

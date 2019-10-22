@@ -71,6 +71,10 @@ public class MyBatisMapperGenerator {
             }
         }
 
+        classBuilder.addMethod(genSelectByExampleMethod(table, packageName, true));
+        classBuilder.addMethod(genSelectByExampleMethod(table, packageName, false));
+        classBuilder.addMethod(genSelectCountByExampleMethod(table, packageName));
+
         String finalPackageName = PackageNameUtil.getMapperPackageName(packageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
@@ -255,7 +259,7 @@ public class MyBatisMapperGenerator {
     }
 
     /**
-     * 具体查看{@link SqlBuilderGenerator#genSelectMethod(Table, String, List, boolean, boolean, boolean)}方法的定义.
+     * 生成查询方法.
      *
      * @param table                  table
      * @param userSpecifyPackageName user specify package name
@@ -264,7 +268,6 @@ public class MyBatisMapperGenerator {
      * @param uniqueIndex            is unique index
      * @param forUpdate              SELECT ... FOR UPDATE
      * @return {@link MethodSpec}
-     * @see SqlBuilderGenerator#genSelectMethod(Table, String, List, boolean, boolean, boolean)
      */
     private MethodSpec genSelectMethod(Table table, String userSpecifyPackageName, List<Column> whereClauseColumns, boolean primaryKey, boolean uniqueIndex, boolean forUpdate) {
         List<String> columnNames = ColumnUtils.columnNames(whereClauseColumns);
@@ -292,8 +295,65 @@ public class MyBatisMapperGenerator {
     }
 
     /**
+     * 自定义sql where的查询方法.
+     *
+     * @param table                  table
+     * @param userSpecifyPackageName user specify package name
+     * @param returnOne              <code>true</code>-如果返回结果只有一条记录，<code>false</code>-如果返回结果是<code>list</code>
+     * @return {@link MethodSpec}
+     */
+    private MethodSpec genSelectByExampleMethod(Table table, String userSpecifyPackageName, boolean returnOne) {
+        String methodName;
+        if (returnOne) {
+            methodName = Constant.SELECT_ONE_BY_EXAMPLE;
+        } else {
+            methodName = Constant.SELECT_LIST_BY_EXAMPLE;
+        }
+        TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
+        AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
+        TypeName returns;
+        Iterable<ParameterSpec> pagingParameterSpecs = null;
+        if (returnOne) {
+            returns = EntityGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+        } else {
+            returns = EntityGeneratorUtil.listOfTableEntity(table, userSpecifyPackageName);
+            pagingParameterSpecs = MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true);
+        }
+        ParameterSpec whereClauseProvider = MyBatisMapperGeneratorUtil.getWhereClauseProviderParameterSpec(true);
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addAnnotation(sqlBuilderAnnotation)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .returns(returns)
+                .addParameter(whereClauseProvider);
+        if (pagingParameterSpecs != null) {
+            builder.addParameters(pagingParameterSpecs);
+        }
+        builder.addParameter(MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true));
+        return builder.build();
+    }
+
+    /**
      * 生成<code>SELECT COUNT</code>方法,用于获取总数.
-     * 具体查看{@link SqlBuilderGenerator#genSelectCountMethod(Table, String, List)}方法的定义.
+     *
+     * @param table                  table
+     * @param userSpecifyPackageName user specify package name
+     * @return {@link MethodSpec}
+     */
+    private MethodSpec genSelectCountByExampleMethod(Table table, String userSpecifyPackageName) {
+        String methodName = Constant.COUNT_BY_EXAMPLE;
+        TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
+        AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
+        ParameterSpec whereClauseProvider = MyBatisMapperGeneratorUtil.getWhereClauseProviderParameterSpec(true);
+        MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
+                .addAnnotation(sqlBuilderAnnotation)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .returns(Integer.TYPE)
+                .addParameter(whereClauseProvider);
+        return builder.build();
+    }
+
+    /**
+     * 生成<code>SELECT COUNT</code>方法,用于获取总数.
      *
      * @param table                  table
      * @param userSpecifyPackageName user specify package name
@@ -315,7 +375,6 @@ public class MyBatisMapperGenerator {
 
     /**
      * 生成批量查询方法.
-     * 具体查看{@link SqlBuilderGenerator#genBatchSelectMethod(Table, String, List, boolean)}方法的定义.
      *
      * @param table                  table
      * @param userSpecifyPackageName user specify package name
