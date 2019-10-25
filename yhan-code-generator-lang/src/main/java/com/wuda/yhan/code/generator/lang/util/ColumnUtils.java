@@ -1,4 +1,4 @@
-package com.wuda.yhan.code.generator.lang;
+package com.wuda.yhan.code.generator.lang.util;
 
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;

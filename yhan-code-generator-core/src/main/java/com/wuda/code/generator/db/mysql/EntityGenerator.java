@@ -2,10 +2,10 @@ package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.MethodSpecUtil;
+import com.wuda.yhan.code.generator.lang.IsSetField;
 import com.wuda.yhan.code.generator.lang.TableEntity;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import com.wuda.yhan.util.commons.IsSetField;
 
 import javax.lang.model.element.Modifier;
 import java.io.Serializable;

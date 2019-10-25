@@ -1,7 +1,7 @@
-package com.wuda.yhan.code.generator.lang;
+package com.wuda.yhan.code.generator.lang.util;
 
-import com.wuda.yhan.util.commons.BeanUtils;
-import com.wuda.yhan.util.commons.JavaNamingUtil;
+import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.TableEntity;
 import org.apache.ibatis.jdbc.SQL;
 
 import java.util.List;
@@ -66,7 +66,7 @@ public class SqlProviderUtils {
                 continue;
             }
             columns[index] = columnName;
-            fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+            fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
             columnValuePlaceholder = "#{" + collectionName + "[" + placeholder + "]." + fieldName + "}";
             valueStatementTemplateBuilder.append(columnValuePlaceholder);
             if (index != columns.length - 1) {
@@ -77,7 +77,7 @@ public class SqlProviderUtils {
         String valueStatementTemplate = valueStatementTemplateBuilder.toString();
         int k = 0;
         StringBuilder builder = new StringBuilder();
-        String autoIncrementField = JavaNamingUtil.toCamelCase(autoIncrementColumn, Constant.word_separator);
+        String autoIncrementField = JavaNamingUtils.toCamelCase(autoIncrementColumn, Constant.word_separator);
         for (TableEntity entity : list) {
             if (k != 0) {
                 builder.append("(");
@@ -181,7 +181,7 @@ public class SqlProviderUtils {
     public static void whereConditions(SQL sql, String... whereClauses) {
         String fieldName;
         for (String columnName : whereClauses) {
-            fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+            fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
             sql.WHERE(columnName + "=#{" + fieldName + "}");
         }
     }
@@ -215,7 +215,7 @@ public class SqlProviderUtils {
                 stringBuilder.append("(");
                 for (int k = 0; k < whereClauses.length; k++) {
                     columnName = whereClauses[k];
-                    fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+                    fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
                     stringBuilder.append(columnName).append("=")
                             .append("#{")
                             .append(collectionName)

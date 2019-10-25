@@ -7,6 +7,10 @@ import com.wuda.yhan.code.generator.lang.*;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
+import com.wuda.yhan.code.generator.lang.util.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.util.SqlProviderUtils;
+import com.wuda.yhan.code.generator.lang.util.TableEntityUtils;
+import com.wuda.yhan.code.generator.lang.util.TableUtils;
 import org.apache.ibatis.jdbc.SQL;
 import org.mybatis.dynamic.sql.where.render.WhereClauseProvider;
 

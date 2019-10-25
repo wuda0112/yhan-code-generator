@@ -3,9 +3,9 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
+import com.wuda.yhan.code.generator.lang.util.StringUtils;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import com.wuda.yhan.util.commons.JavaNamingUtil;
-import com.wuda.yhan.util.commons.StringUtil;
 
 /**
  * {@link TableMetaInfoGenerator}生成代码时,命名工具类.
@@ -34,9 +34,9 @@ class TableMetaInfoGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtil.toCamelCase(tableName, Constant.word_separator);
-        className = StringUtil.firstCharToUpperCase(className);
-        className = StringUtil.addSuffix(className, class_name_suffix);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        className = StringUtils.firstCharToUpperCase(className);
+        className = StringUtils.addSuffix(className, class_name_suffix);
         return className;
     }
 
@@ -116,7 +116,7 @@ class TableMetaInfoGeneratorUtil {
      */
     static String toAsFieldName(String fieldName) {
         String _fieldName = fieldName.toUpperCase();
-        return StringUtil.addSuffix(_fieldName, column_name_as_suffix);
+        return StringUtils.addSuffix(_fieldName, column_name_as_suffix);
     }
 
     /**
@@ -127,7 +127,7 @@ class TableMetaInfoGeneratorUtil {
      */
     static String toAsFieldNameConcatTable(String fieldName) {
         String _fieldName = fieldName.toUpperCase();
-        return StringUtil.addSuffix(_fieldName, column_name_concat_table_as_suffix);
+        return StringUtils.addSuffix(_fieldName, column_name_concat_table_as_suffix);
     }
 
     /**
@@ -137,7 +137,7 @@ class TableMetaInfoGeneratorUtil {
      * @return field value
      */
     static String getAsFieldValue(String columnName) {
-        return columnName + " AS " + JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+        return columnName + " AS " + JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
     }
 
     /**
@@ -149,7 +149,7 @@ class TableMetaInfoGeneratorUtil {
      */
     static String getAsFieldValueConcatTableName(String tableName, String columnName) {
         String alias = tableName + Constant.word_separator + columnName;
-        return columnName + " AS " + JavaNamingUtil.toCamelCase(alias, Constant.word_separator);
+        return columnName + " AS " + JavaNamingUtils.toCamelCase(alias, Constant.word_separator);
     }
 
 }

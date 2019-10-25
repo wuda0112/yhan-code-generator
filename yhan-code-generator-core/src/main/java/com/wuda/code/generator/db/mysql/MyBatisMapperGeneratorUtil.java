@@ -3,10 +3,10 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
+import com.wuda.yhan.code.generator.lang.util.StringUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import com.wuda.yhan.util.commons.JavaNamingUtil;
-import com.wuda.yhan.util.commons.StringUtil;
 import org.apache.ibatis.annotations.Param;
 import org.mybatis.dynamic.sql.where.render.WhereClauseProvider;
 
@@ -30,9 +30,9 @@ class MyBatisMapperGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtil.toCamelCase(tableName, Constant.word_separator);
-        className = StringUtil.firstCharToUpperCase(className);
-        className = StringUtil.addSuffix(className, Constant.MAPPER_CLASS_NAME_SUFFIX);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        className = StringUtils.firstCharToUpperCase(className);
+        className = StringUtils.addSuffix(className, Constant.MAPPER_CLASS_NAME_SUFFIX);
         return className;
     }
 
@@ -238,7 +238,7 @@ class MyBatisMapperGeneratorUtil {
         for (int index = 0; index < whereClauseColumns.size(); index++) {
             column = whereClauseColumns.get(index);
             String fieldName = EntityGeneratorUtil.toFieldName(column);
-            fieldName = StringUtil.firstCharToUpperCase(fieldName);
+            fieldName = StringUtils.firstCharToUpperCase(fieldName);
             appender.append(fieldName);
             if (index != last) {
                 appender.append("And");

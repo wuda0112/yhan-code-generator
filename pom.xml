@@ -45,10 +45,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.github.wuda0112</groupId>
-            <artifactId>yhan-commons-util</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
@@ -72,14 +68,6 @@
                 <groupId>io.github.wuda0112</groupId>
                 <artifactId>yhan-code-generator-ddl-parser-mysql</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.github.wuda0112</groupId>
-                <artifactId>yhan-base</artifactId>
-                <version>${yhan-base-version}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
 
         </dependencies>

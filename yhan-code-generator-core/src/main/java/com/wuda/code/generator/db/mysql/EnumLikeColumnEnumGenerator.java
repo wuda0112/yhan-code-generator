@@ -2,9 +2,9 @@ package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.JavaFile;
 import com.wuda.code.generator.PairEnumGenerator;
+import com.wuda.yhan.code.generator.lang.util.StringUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import com.wuda.yhan.util.commons.StringUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +43,6 @@ public class EnumLikeColumnEnumGenerator {
 
     private String getEnumClassName(Table table, Column column) {
         String className = EntityGeneratorUtil.toFieldName(column.name());
-        return EntityGeneratorUtil.toClassName(table.id().table()) + StringUtil.firstCharToUpperCase(className) + "Enum";
+        return EntityGeneratorUtil.toClassName(table.id().table()) + StringUtils.firstCharToUpperCase(className) + "Enum";
     }
 }

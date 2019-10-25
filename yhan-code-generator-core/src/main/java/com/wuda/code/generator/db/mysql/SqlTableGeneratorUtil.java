@@ -3,9 +3,9 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
+import com.wuda.yhan.code.generator.lang.util.StringUtils;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import com.wuda.yhan.util.commons.JavaNamingUtil;
-import com.wuda.yhan.util.commons.StringUtil;
 
 public class SqlTableGeneratorUtil {
 
@@ -21,9 +21,9 @@ public class SqlTableGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtil.toCamelCase(tableName, Constant.word_separator);
-        className = StringUtil.firstCharToUpperCase(className);
-        className = StringUtil.addSuffix(className, class_name_suffix);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        className = StringUtils.firstCharToUpperCase(className);
+        className = StringUtils.addSuffix(className, class_name_suffix);
         return className;
     }
 

@@ -1,9 +1,9 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
-import com.wuda.yhan.code.generator.lang.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.util.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
-import com.wuda.yhan.code.generator.lang.TableUtils;
+import com.wuda.yhan.code.generator.lang.util.TableUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;

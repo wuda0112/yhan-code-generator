@@ -3,10 +3,10 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.IsSetField;
+import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
+import com.wuda.yhan.code.generator.lang.util.StringUtils;
 import com.wuda.yhan.code.generator.lang.relational.Table;
-import com.wuda.yhan.util.commons.IsSetField;
-import com.wuda.yhan.util.commons.JavaNamingUtil;
-import com.wuda.yhan.util.commons.StringUtil;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -23,8 +23,8 @@ class EntityGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtil.toCamelCase(tableName, Constant.word_separator);
-        className = StringUtil.firstCharToUpperCase(className);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        className = StringUtils.firstCharToUpperCase(className);
         return className;
     }
 
@@ -35,7 +35,7 @@ class EntityGeneratorUtil {
      * @return 属性名称
      */
     static String toFieldName(String columnName) {
-        return JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
+        return JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
     }
 
     /**
@@ -45,8 +45,8 @@ class EntityGeneratorUtil {
      * @return 属性名称
      */
     static String toIsSetFieldName(String columnName) {
-        String fieldName = JavaNamingUtil.toCamelCase(columnName, Constant.word_separator);
-        return StringUtil.addSuffix(fieldName, IsSetField.suffix);
+        String fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
+        return StringUtils.addSuffix(fieldName, IsSetField.suffix);
     }
 
     /**
@@ -59,7 +59,7 @@ class EntityGeneratorUtil {
      */
     static ParameterSpec getEntityParameter(Table table, String userSpecifyPackageName, boolean mybatisParamAnnotation) {
         String entityName = EntityGeneratorUtil.toClassName(table.id().table());
-        String parameterName = StringUtil.firstCharToLowerCase(entityName);
+        String parameterName = StringUtils.firstCharToLowerCase(entityName);
         TypeName typeName = getTypeName(table, userSpecifyPackageName);
         ParameterSpec.Builder builder = ParameterSpec.builder(typeName, parameterName);
         if (mybatisParamAnnotation) {
