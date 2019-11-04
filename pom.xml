@@ -11,7 +11,7 @@
 
     <packaging>pom</packaging>
     <artifactId>yhan-code-generator</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
 
     <modules>
         <module>yhan-code-generator-core</module>
@@ -23,7 +23,7 @@
         <url>https://github.com/wuda0112/yhan-code-generator</url>
         <connection>scm:git:git@github.com:wuda0112/yhan-code-generator.git</connection>
         <developerConnection>scm:git:git@github.com:wuda0112/yhan-code-generator.git</developerConnection>
-      <tag>HEAD</tag>
+      <tag>release-1.0.1</tag>
   </scm>
     <licenses>
         <license>
