@@ -3,7 +3,9 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.CodeGenerateException;
 import com.wuda.code.generator.TypeNameUtils;
-import com.wuda.yhan.code.generator.lang.*;
+import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.OrderBy;
+import com.wuda.yhan.code.generator.lang.TableEntity;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
@@ -12,6 +14,7 @@ import com.wuda.yhan.code.generator.lang.util.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.util.TableEntityUtils;
 import com.wuda.yhan.code.generator.lang.util.TableUtils;
 import org.apache.ibatis.jdbc.SQL;
+import org.mybatis.dynamic.sql.SqlColumn;
 import org.mybatis.dynamic.sql.where.render.WhereClauseProvider;
 
 import javax.lang.model.element.Modifier;
@@ -101,17 +104,17 @@ public class SqlBuilderGenerator {
                 .returns(String.class)
                 .addParameter(parameterSpec)
                 .addStatement("$T.validate($L)", SqlProviderUtils.class, parameterSpec.name)
-                .addStatement("$T setterCalledFieldToColumnMap = $T.fieldToColumn($L,$L)", mapOfString, TableEntityUtils.class, parameterSpec.name, true)
-                .addStatement("$T.setterCalledFieldValidate($L, setterCalledFieldToColumnMap)", SqlProviderUtils.class, parameterSpec.name)
+                .addStatement("$T nonNullFieldToColumnMap = $T.fieldToColumn($L,$L)", mapOfString, TableEntityUtils.class, parameterSpec.name, true)
+                .addStatement("$T.noneNullFieldValidate($L, nonNullFieldToColumnMap)", SqlProviderUtils.class, parameterSpec.name)
                 .addStatement("$T sql = new $T()", SQL.class, SQL.class)
                 .addStatement("sql.INSERT_INTO($T.$L)", tableMetaInfo, schemaDotTable)
-                .addStatement("$T.insertColumnsAndValues(sql,setterCalledFieldToColumnMap)", SqlProviderUtils.class)
+                .addStatement("$T.insertColumnsAndValues(sql,nonNullFieldToColumnMap)", SqlProviderUtils.class)
                 .addStatement("return sql.toString()")
                 .build();
     }
 
     /**
-     * 为{@link #genInsertMethod(Table, String)}提供方法体模板.
+     * 为{@link #genInsertMethod}提供方法体模板.
      *
      * @param schemaDotTable schema.table
      * @param entity         表对应的实体
@@ -120,11 +123,11 @@ public class SqlBuilderGenerator {
     @SuppressWarnings("unused")
     private String insertMethodStatementTemplate(String schemaDotTable, TableEntity entity) {
         SqlProviderUtils.validate(entity);
-        Map<String, String> setterCalledFieldToColumnMap = TableEntityUtils.fieldToColumn(entity, true);
-        SqlProviderUtils.setterCalledFieldValidate(entity, setterCalledFieldToColumnMap);
+        Map<String, String> nonNullFieldToColumnMap = TableEntityUtils.fieldToColumn(entity, true);
+        SqlProviderUtils.noneNullFieldValidate(entity, nonNullFieldToColumnMap);
         SQL sql = new SQL();
         sql.INSERT_INTO(schemaDotTable);
-        SqlProviderUtils.insertColumnsAndValues(sql, setterCalledFieldToColumnMap);
+        SqlProviderUtils.insertColumnsAndValues(sql, nonNullFieldToColumnMap);
         return sql.toString();
     }
 
@@ -252,19 +255,19 @@ public class SqlBuilderGenerator {
         builder.addParameters(conditionsParameterSpec);
         builder.addParameter(updateParameterSpec);
         builder.addStatement("$T.validate($L)", SqlProviderUtils.class, updateParameterSpec.name);
-        builder.addStatement("$T setterCalledFieldToColumnMap = $T.fieldToColumn($L,$L)", mapOfString, TableEntityUtils.class, updateParameterSpec.name, true);
-        builder.addStatement("$T.setterCalledFieldValidate($L,setterCalledFieldToColumnMap)", SqlProviderUtils.class, updateParameterSpec.name);
+        builder.addStatement("$T nonNullFieldToColumnMap = $T.fieldToColumn($L,$L)", mapOfString, TableEntityUtils.class, updateParameterSpec.name, true);
+        builder.addStatement("$T.noneNullFieldValidate($L,nonNullFieldToColumnMap)", SqlProviderUtils.class, updateParameterSpec.name);
         builder.addStatement("$T sql = new $T()", SQL.class, SQL.class);
         builder.addStatement("sql.UPDATE($T.$L)", tableMetaInfo, schemaDotTable);
         if (primaryKey) {
-            builder.addStatement("$T.updateSetColumnsAndValues(sql,setterCalledFieldToColumnMap,$S,$T.$L)", SqlProviderUtils.class, updateParameterSpec.name, tableMetaInfo, primaryKeyFieldName);
+            builder.addStatement("$T.updateSetColumnsAndValues(sql,nonNullFieldToColumnMap,$S,$T.$L)", SqlProviderUtils.class, updateParameterSpec.name, tableMetaInfo, primaryKeyFieldName);
             builder.addStatement("$T.whereConditions(sql, $T.$L)", SqlProviderUtils.class, tableMetaInfo, primaryKeyFieldName);
         } else {
             List<String> list = new ArrayList<>(table.primaryKeyColumnNames().size() + columnNames.size());
             list.addAll(table.primaryKeyColumnNames());
             list.addAll(columnNames);
             String exclusiveColumnQuotingString = SqlProviderUtils.toDoubleQuotedString(list);
-            builder.addStatement("$T.updateSetColumnsAndValues(sql,setterCalledFieldToColumnMap,$S,$L)", SqlProviderUtils.class, updateParameterSpec.name, exclusiveColumnQuotingString);
+            builder.addStatement("$T.updateSetColumnsAndValues(sql,nonNullFieldToColumnMap,$S,$L)", SqlProviderUtils.class, updateParameterSpec.name, exclusiveColumnQuotingString);
             String whereClauseColumnQuotingString = SqlProviderUtils.toDoubleQuotedString(columnNames);
             builder.addStatement("$T.whereConditions(sql, $L)", SqlProviderUtils.class, whereClauseColumnQuotingString);
         }
@@ -284,11 +287,11 @@ public class SqlBuilderGenerator {
     @SuppressWarnings("unused")
     private String updateMethodStatementTemplate(String schemaDotTable, TableEntity entity, String parameterName, String... whereClauseColumns) {
         SqlProviderUtils.validate(entity);
-        Map<String, String> setterCalledFieldToColumnMap = TableEntityUtils.fieldToColumn(entity, true);
-        SqlProviderUtils.setterCalledFieldValidate(entity, setterCalledFieldToColumnMap);
+        Map<String, String> nonNullFieldToColumnMap = TableEntityUtils.fieldToColumn(entity, true);
+        SqlProviderUtils.noneNullFieldValidate(entity, nonNullFieldToColumnMap);
         SQL sql = new SQL();
         sql.UPDATE(schemaDotTable);
-        SqlProviderUtils.updateSetColumnsAndValues(sql, setterCalledFieldToColumnMap, parameterName, whereClauseColumns);
+        SqlProviderUtils.updateSetColumnsAndValues(sql, nonNullFieldToColumnMap, parameterName, whereClauseColumns);
         SqlProviderUtils.whereConditions(sql, whereClauseColumns);
         return sql.toString();
     }
@@ -323,16 +326,16 @@ public class SqlBuilderGenerator {
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .returns(String.class)
-                .addParameters(whereClauseParameterSpecs);
+                .addParameters(whereClauseParameterSpecs)
+                .addParameter(retrieveColumnParameter);
         boolean paging = false;
         if (!primaryKey && !uniqueIndex) {
-            builder.addParameters(MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true));
             paging = true;
         }
-        builder.addParameter(retrieveColumnParameter)
-                .addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, retrieveColumnParameter.name)
+        builder.addStatement("String[] $L = $T.sqlColumnsToArray($L)", Constant.RETRIEVE_COLUMN_ARRAY, SqlProviderUtils.class, retrieveColumnParameter.name)
+                .addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, Constant.RETRIEVE_COLUMN_ARRAY)
                 .addStatement("$T sql = new $T()", SQL.class, SQL.class)
-                .addStatement("sql.SELECT($L)", retrieveColumnParameter.name)
+                .addStatement("sql.SELECT($L)", Constant.RETRIEVE_COLUMN_ARRAY)
                 .addStatement("sql.FROM($T.$L)", tableMetaInfo, schemaDotTable);
         if (primaryKey) {
             builder.addStatement("$T.whereConditions(sql, $T.$L)", SqlProviderUtils.class, tableMetaInfo, TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName());
@@ -345,15 +348,13 @@ public class SqlBuilderGenerator {
         if (forUpdate) {
             builder.addStatement("$T.appendForUpdate(builder)", SqlProviderUtils.class);
         }
-        if (paging) {
-            builder.addStatement("$T.appendPaging(builder)", SqlProviderUtils.class);
-        }
+        ifPaging(paging, builder);
         builder.addStatement("return builder.toString()");
         return builder.build();
     }
 
     /**
-     * 为{@link #genSelectMethod(Table, String, List, boolean, boolean, boolean)}提供方法体模板.
+     * 为{@link #genSelectMethod}提供方法体模板.
      *
      * @param schemaDotTable     schema.table
      * @param whereClauseColumns where条件中的columns
@@ -361,14 +362,16 @@ public class SqlBuilderGenerator {
      * @param paging             是否分页
      * @param offset             分页的offset
      * @param rowCount           分页的row count
-     * @param columns            需要返回的列
+     * @param orderByList        排序参数
+     * @param sqlColumns         需要返回的列
      * @return sql
      */
     @SuppressWarnings("unused")
-    private String selectMethodStatementTemplate(String schemaDotTable, String[] whereClauseColumns, boolean forUpdate, boolean paging, int offset, int rowCount, String... columns) {
-        SqlProviderUtils.selectColumnsValidate(columns);
+    private String selectMethodStatementTemplate(String schemaDotTable, String[] whereClauseColumns, boolean forUpdate, boolean paging, int offset, int rowCount, List<OrderBy> orderByList, List<SqlColumn> sqlColumns) {
+        String[] retrieveColumns = SqlProviderUtils.sqlColumnsToArray(sqlColumns);
+        SqlProviderUtils.selectColumnsValidate(retrieveColumns);
         SQL sql = new SQL();
-        sql.SELECT(columns);
+        sql.SELECT(retrieveColumns);
         sql.FROM(schemaDotTable);
         SqlProviderUtils.whereConditions(sql, whereClauseColumns);
         StringBuilder builder = new StringBuilder();
@@ -377,6 +380,7 @@ public class SqlBuilderGenerator {
             SqlProviderUtils.appendForUpdate(builder);
         }
         if (paging) {
+            SqlProviderUtils.appendOrderBy(builder, orderByList);
             SqlProviderUtils.appendPaging(builder);
         }
         return builder.toString();
@@ -464,9 +468,10 @@ public class SqlBuilderGenerator {
                 .returns(String.class)
                 .addParameter(parameterSpec)
                 .addParameter(retrieveColumnParameter);
-        builder.addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, retrieveColumnParameter.name)
+        builder.addStatement("String[] $L = SqlProviderUtils.sqlColumnsToArray($L)", Constant.RETRIEVE_COLUMN_ARRAY, retrieveColumnParameter.name)
+                .addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, Constant.RETRIEVE_COLUMN_ARRAY)
                 .addStatement("$T sql = new $T()", SQL.class, SQL.class)
-                .addStatement("sql.SELECT($L)", retrieveColumnParameter.name)
+                .addStatement("sql.SELECT($L)", Constant.RETRIEVE_COLUMN_ARRAY)
                 .addStatement("sql.FROM($T.$L)", tableMetaInfo, schemaDotTable);
         if (primaryKey) {
             builder.addStatement("$T.whereConditionsForeach(sql,$S,$L.size(), $T.$L)", SqlProviderUtils.class, collectionName, parameterSpec.name, tableMetaInfo, TableMetaInfoGeneratorUtil.getPrimaryKeyFieldName());
@@ -481,17 +486,18 @@ public class SqlBuilderGenerator {
     }
 
     /**
-     * 为{@link #genBatchSelectMethod(Table, String, List, boolean)}提供方法体模板.
+     * 为{@link #genBatchSelectMethod}提供方法体模板.
      *
      * @param schemaDotTable     schema.table
      * @param collectionName     集合名称,类似Mybatis foreach中的collection
      * @param collectionSize     集合的大小
      * @param whereClauseColumns where条件中的columns
-     * @param retrieveColumns    需要返回的列
+     * @param sqlColumns         需要返回的列
      * @return sql
      */
     @SuppressWarnings("unused")
-    private String batchSelectMethodStatementTemplate(String schemaDotTable, String collectionName, int collectionSize, String[] whereClauseColumns, String... retrieveColumns) {
+    private String batchSelectMethodStatementTemplate(String schemaDotTable, String collectionName, int collectionSize, String[] whereClauseColumns, List<SqlColumn> sqlColumns) {
+        String[] retrieveColumns = SqlProviderUtils.sqlColumnsToArray(sqlColumns);
         SqlProviderUtils.selectColumnsValidate(retrieveColumns);
         SQL sql = new SQL();
         sql.SELECT(retrieveColumns);
@@ -527,23 +533,21 @@ public class SqlBuilderGenerator {
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .returns(String.class)
+                .addParameter(retrieveColumnParameter)
                 .addParameter(whereClauseProvider);
         boolean paging = false;
         if (!returnOne) {
-            builder.addParameters(MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true));
             paging = true;
         }
-        builder.addParameter(retrieveColumnParameter)
-                .addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, retrieveColumnParameter.name)
+        builder.addStatement("String[] $L = SqlProviderUtils.sqlColumnsToArray($L)", Constant.RETRIEVE_COLUMN_ARRAY, retrieveColumnParameter.name)
+                .addStatement("$T.selectColumnsValidate($L)", SqlProviderUtils.class, Constant.RETRIEVE_COLUMN_ARRAY)
                 .addStatement("$T sql = new $T()", SQL.class, SQL.class)
-                .addStatement("sql.SELECT($L)", retrieveColumnParameter.name)
+                .addStatement("sql.SELECT($L)", Constant.RETRIEVE_COLUMN_ARRAY)
                 .addStatement("sql.FROM($T.$L)", tableMetaInfo, schemaDotTable);
         builder.addStatement("$T builder = new $T()", StringBuilder.class, StringBuilder.class)
                 .addStatement("sql.usingAppender(builder)");
         builder.addStatement("builder.append($L).append($L.getWhereClause())", SqlProviderUtils.toDoubleQuotedString(" "), whereClauseProvider.name);
-        if (paging) {
-            builder.addStatement("$T.appendPaging(builder)", SqlProviderUtils.class);
-        }
+        ifPaging(paging, builder);
         builder.addStatement("return builder.toString()");
         return builder.build();
     }
@@ -554,19 +558,22 @@ public class SqlBuilderGenerator {
      * @param schemaDotTable      schema.table
      * @param whereClauseProvider {@link org.mybatis.dynamic.sql.where.render.WhereClauseProvider}
      * @param paging              是否分页
-     * @param columns             需要返回的列
+     * @param orderByList         排序参数
+     * @param sqlColumns          需要返回的列
      * @return sql
      */
     @SuppressWarnings("unused")
-    private String selectByExampleMethodStatementTemplate(String schemaDotTable, WhereClauseProvider whereClauseProvider, boolean paging, String... columns) {
-        SqlProviderUtils.selectColumnsValidate(columns);
+    private String selectByExampleMethodStatementTemplate(String schemaDotTable, WhereClauseProvider whereClauseProvider, boolean paging, List<OrderBy> orderByList, List<SqlColumn> sqlColumns) {
+        String[] retriveColumns = SqlProviderUtils.sqlColumnsToArray(sqlColumns);
+        SqlProviderUtils.selectColumnsValidate(retriveColumns);
         SQL sql = new SQL();
-        sql.SELECT(columns);
+        sql.SELECT(retriveColumns);
         sql.FROM(schemaDotTable);
         StringBuilder builder = new StringBuilder();
         sql.usingAppender(builder);
         builder.append(" ").append(whereClauseProvider.getWhereClause());
         if (paging) {
+            SqlProviderUtils.appendOrderBy(builder, orderByList);
             SqlProviderUtils.appendPaging(builder);
         }
         return builder.toString();
@@ -617,5 +624,23 @@ public class SqlBuilderGenerator {
         sql.usingAppender(builder);
         builder.append(" ").append(whereClauseProvider.getWhereClause());
         return builder.toString();
+    }
+
+    /**
+     * 如果分页
+     *
+     * @param paging  是否分页
+     * @param builder MethodSpec.Builder
+     */
+    private void ifPaging(boolean paging, MethodSpec.Builder builder) {
+        if (paging) {
+            ParameterSpec orderByParameterSpec = MyBatisMapperGeneratorUtil.getOrderByParameterSpec(true);
+
+            builder.addParameter(orderByParameterSpec);
+            builder.addParameters(MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true));
+
+            builder.addStatement("$T.appendOrderBy(builder,$L)", SqlProviderUtils.class, orderByParameterSpec.name);
+            builder.addStatement("$T.appendPaging(builder)", SqlProviderUtils.class);
+        }
     }
 }

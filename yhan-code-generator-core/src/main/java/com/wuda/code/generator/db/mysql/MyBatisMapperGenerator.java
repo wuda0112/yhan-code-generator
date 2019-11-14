@@ -1,12 +1,12 @@
 package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
-import com.wuda.yhan.code.generator.lang.util.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
-import com.wuda.yhan.code.generator.lang.util.TableUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Index;
 import com.wuda.yhan.code.generator.lang.relational.Table;
+import com.wuda.yhan.code.generator.lang.util.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.util.TableUtils;
 
 import javax.lang.model.element.Modifier;
 import java.util.List;
@@ -275,22 +275,20 @@ public class MyBatisMapperGenerator {
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
         AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
         TypeName returns;
-        Iterable<ParameterSpec> pagingParameterSpecs = null;
+        boolean paging = false;
         if (primaryKey || uniqueIndex) {
             returns = EntityGeneratorUtil.getTypeName(table, userSpecifyPackageName);
         } else {
             returns = EntityGeneratorUtil.listOfTableEntity(table, userSpecifyPackageName);
-            pagingParameterSpecs = MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true);
+            paging = true;
         }
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
                 .addAnnotation(sqlBuilderAnnotation)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(returns)
-                .addParameters(MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true));
-        if (pagingParameterSpecs != null) {
-            builder.addParameters(pagingParameterSpecs);
-        }
-        builder.addParameter(MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true));
+                .addParameters(MyBatisMapperGeneratorUtil.getParameterSpecs(whereClauseColumns, true))
+                .addParameter(MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true));
+        ifPaging(paging, builder);
         return builder.build();
     }
 
@@ -312,23 +310,21 @@ public class MyBatisMapperGenerator {
         TypeName sqlBuilderType = SqlBuilderGeneratorUtil.getSqlBuilderTypeName(table, userSpecifyPackageName);
         AnnotationSpec sqlBuilderAnnotation = MybatisFrameworkUtils.getSelectProviderAnnotationSpec(sqlBuilderType, methodName);
         TypeName returns;
-        Iterable<ParameterSpec> pagingParameterSpecs = null;
+        boolean paging = false;
         if (returnOne) {
             returns = EntityGeneratorUtil.getTypeName(table, userSpecifyPackageName);
         } else {
             returns = EntityGeneratorUtil.listOfTableEntity(table, userSpecifyPackageName);
-            pagingParameterSpecs = MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true);
+            paging = true;
         }
         ParameterSpec whereClauseProvider = MyBatisMapperGeneratorUtil.getWhereClauseProviderParameterSpec(true);
         MethodSpec.Builder builder = MethodSpec.methodBuilder(methodName)
                 .addAnnotation(sqlBuilderAnnotation)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .returns(returns)
+                .addParameter(MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true))
                 .addParameter(whereClauseProvider);
-        if (pagingParameterSpecs != null) {
-            builder.addParameters(pagingParameterSpecs);
-        }
-        builder.addParameter(MyBatisMapperGeneratorUtil.getRetrieveColumnsParameterSpec(true));
+        ifPaging(paging, builder);
         return builder.build();
     }
 
@@ -397,5 +393,13 @@ public class MyBatisMapperGenerator {
                 .addParameter(parameterSpec)
                 .addParameter(retrieveColumns);
         return builder.build();
+    }
+
+    private void ifPaging(boolean paging, MethodSpec.Builder builder) {
+        if (paging) {
+            builder.addParameter(MyBatisMapperGeneratorUtil.getOrderByParameterSpec(true));
+            Iterable<ParameterSpec> pagingParameterSpecs = MyBatisMapperGeneratorUtil.getPagingParameterSpecs(true);
+            builder.addParameters(pagingParameterSpecs);
+        }
     }
 }

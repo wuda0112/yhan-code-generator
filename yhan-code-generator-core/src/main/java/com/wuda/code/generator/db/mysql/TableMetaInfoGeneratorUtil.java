@@ -3,9 +3,9 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
 import com.wuda.yhan.code.generator.lang.util.StringUtils;
-import com.wuda.yhan.code.generator.lang.relational.Table;
 
 /**
  * {@link TableMetaInfoGenerator}生成代码时,命名工具类.
@@ -34,7 +34,7 @@ class TableMetaInfoGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.underscore);
         className = StringUtils.firstCharToUpperCase(className);
         className = StringUtils.addSuffix(className, class_name_suffix);
         return className;
@@ -78,6 +78,10 @@ class TableMetaInfoGeneratorUtil {
      */
     static String getSchemaDotTableFieldName() {
         return "SCHEMA_DOT_TABLE";
+    }
+
+    static String getSchemaDotTableFieldValue(Table table) {
+        return table.id().toQuotedString('`');
     }
 
     /**
@@ -137,7 +141,7 @@ class TableMetaInfoGeneratorUtil {
      * @return field value
      */
     static String getAsFieldValue(String columnName) {
-        return columnName + " AS " + JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
+        return JavaNamingUtils.toCamelCase(columnName, Constant.underscore);
     }
 
     /**
@@ -148,8 +152,23 @@ class TableMetaInfoGeneratorUtil {
      * @return field value
      */
     static String getAsFieldValueConcatTableName(String tableName, String columnName) {
-        String alias = tableName + Constant.word_separator + columnName;
-        return columnName + " AS " + JavaNamingUtils.toCamelCase(alias, Constant.word_separator);
+        String alias = tableName + Constant.underscore + columnName;
+        return JavaNamingUtils.toCamelCase(alias, Constant.underscore);
+    }
+
+    /**
+     * 获取表的别名.
+     *
+     * @param table
+     * @return table alias
+     */
+    static String tableAlias(Table table) {
+        String tableAcronym = StringUtils.acronym(table.id().table(), Constant.underscore);
+        if (tableAcronym.length() == 1) {
+            // 表名只有一个单词
+            tableAcronym = table.id().table();
+        }
+        return table.id().schema() + "_" + tableAcronym;
     }
 
 }

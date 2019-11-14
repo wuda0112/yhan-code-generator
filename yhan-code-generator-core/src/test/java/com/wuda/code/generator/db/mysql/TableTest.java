@@ -9,21 +9,21 @@ public class TableTest {
 
     public List<Table> getTable() {
 
-        String ddl = "CREATE TABLE `my_schema`.`user_basic` (\n" +
-                "\t`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,\n" +
-                "\t`username` VARCHAR(50) NULL DEFAULT NULL,\n" +
-                "\t`nickname` VARCHAR(50) NULL DEFAULT NULL,\n" +
-                "\t`phone` VARCHAR(45) NULL DEFAULT NULL,\n" +
-                "\t`is_deleted` TINYINT(4) NOT NULL DEFAULT '0',\n" +
+        String ddl = "CREATE TABLE cmp.`message_item` (\n" +
+                "\t`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',\n" +
+                "\t`message_category_id` INT(10) UNSIGNED NOT NULL COMMENT '所属消息分类',\n" +
+                "\t`item_code` VARCHAR(45) NOT NULL COMMENT '唯一code，用于查找',\n" +
+                "\t`item_name` VARCHAR(45) NOT NULL COMMENT '命名',\n" +
+                "\t`creation_time` TIMESTAMP NOT NULL DEFAULT current_timestamp() COMMENT '创建时间',\n" +
                 "\tPRIMARY KEY (`id`),\n" +
-                "\tUNIQUE INDEX `idx_username` (`username`),\n" +
-                "\tUNIQUE INDEX `idx_phone_is_deleted` (`phone`, `is_deleted`),\n" +
-                "\tINDEX `idx_nickname` (`nickname`)\n" +
+                "\tUNIQUE INDEX `idx_item_code` (`item_code`),\n" +
+                "\tINDEX `idx_message_category_id` (`message_category_id`)\n" +
                 ")\n" +
+                "COMMENT='具体的一种消息'\n" +
                 "COLLATE='utf8_general_ci'\n" +
                 "ENGINE=InnoDB\n" +
-                "AUTO_INCREMENT=21\n" +
-                ";";
+                "AUTO_INCREMENT=120\n" +
+                ";\n";
         MySqlCreateTableStatementParser parser = new MySqlCreateTableStatementParser();
         return parser.parse(ddl);
     }

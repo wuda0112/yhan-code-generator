@@ -3,9 +3,7 @@ package com.wuda.code.generator;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
-import com.wuda.yhan.code.generator.lang.IsSetField;
 import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
-import com.wuda.yhan.code.generator.lang.util.StringUtils;
 
 import javax.lang.model.element.Modifier;
 
@@ -35,12 +33,10 @@ public class MethodSpecUtil {
     /**
      * 生成setter方法.
      *
-     * @param field         列对应的属性.
-     * @param hasIsSetField 此属性是否有对应的{@link IsSetField}属性
+     * @param field 列对应的属性.
      * @return setter方法
-     * @see IsSetField
      */
-    public static MethodSpec genSetter(FieldSpec field, boolean hasIsSetField) {
+    public static MethodSpec genSetter(FieldSpec field) {
         String fieldName = field.name;
         String methodName = JavaNamingUtils.genSetterMethodName(fieldName);
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName)
@@ -48,15 +44,6 @@ public class MethodSpecUtil {
                 .returns(TypeName.VOID)
                 .addParameter(field.type, fieldName)
                 .addStatement("this." + fieldName + "=" + fieldName);
-        if (hasIsSetField) {
-            // 对应的"IsSet"属性
-            String isSetField = StringUtils.addSuffix(fieldName, IsSetField.suffix);
-
-            methodBuilder.beginControlFlow("if ( " + fieldName + " != null )");
-            methodBuilder.addStatement("this." + isSetField + "=true");
-            methodBuilder.endControlFlow();
-
-        }
         return methodBuilder.build();
     }
 }

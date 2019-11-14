@@ -1,13 +1,18 @@
 package com.wuda.code.generator.db.mysql;
 
-import com.squareup.javapoet.*;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
-import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
-import com.wuda.yhan.code.generator.lang.util.StringUtils;
+import com.wuda.yhan.code.generator.lang.OrderBy;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
+import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
+import com.wuda.yhan.code.generator.lang.util.StringUtils;
 import org.apache.ibatis.annotations.Param;
+import org.mybatis.dynamic.sql.SqlColumn;
 import org.mybatis.dynamic.sql.where.render.WhereClauseProvider;
 
 import java.util.ArrayList;
@@ -30,7 +35,7 @@ class MyBatisMapperGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.underscore);
         className = StringUtils.firstCharToUpperCase(className);
         className = StringUtils.addSuffix(className, Constant.MAPPER_CLASS_NAME_SUFFIX);
         return className;
@@ -98,8 +103,8 @@ class MyBatisMapperGeneratorUtil {
      */
     static ParameterSpec getRetrieveColumnsParameterSpec(boolean mybatisParamAnnotation) {
         String parameterName = Constant.RETRIEVE_COLUMNS;
-        ArrayTypeName arrayTypeName = ArrayTypeName.of(String.class);
-        ParameterSpec.Builder builder = ParameterSpec.builder(arrayTypeName, parameterName);
+        ParameterizedTypeName listOfSqlColumn = TypeNameUtils.listOf(SqlColumn.class);
+        ParameterSpec.Builder builder = ParameterSpec.builder(listOfSqlColumn, parameterName);
         if (mybatisParamAnnotation) {
             builder.addAnnotation(MybatisFrameworkUtils.getParamAnnotationSpec(parameterName));
         }
@@ -256,6 +261,22 @@ class MyBatisMapperGeneratorUtil {
         String parameterName = Constant.WHERE_CLAUSE_PROVIDER;
         ClassName parameterType = ClassName.get(WhereClauseProvider.class);
         ParameterSpec.Builder builder = ParameterSpec.builder(parameterType, parameterName);
+        if (mybatisParamAnnotation) {
+            builder.addAnnotation(getParamAnnotationSpec(parameterName));
+        }
+        return builder.build();
+    }
+
+    /**
+     * 排序参数.
+     *
+     * @param mybatisParamAnnotation 是否需要在参数前添加{@link Param}注解
+     * @return ParameterSpec
+     */
+    static ParameterSpec getOrderByParameterSpec(boolean mybatisParamAnnotation) {
+        String parameterName = Constant.ORDER_BY;
+        ParameterizedTypeName parameterizedTypeName = TypeNameUtils.listOf(OrderBy.class);
+        ParameterSpec.Builder builder = ParameterSpec.builder(parameterizedTypeName, parameterName);
         if (mybatisParamAnnotation) {
             builder.addAnnotation(getParamAnnotationSpec(parameterName));
         }

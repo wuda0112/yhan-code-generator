@@ -3,10 +3,9 @@ package com.wuda.code.generator.db.mysql;
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.TypeNameUtils;
 import com.wuda.yhan.code.generator.lang.Constant;
-import com.wuda.yhan.code.generator.lang.IsSetField;
+import com.wuda.yhan.code.generator.lang.relational.Table;
 import com.wuda.yhan.code.generator.lang.util.JavaNamingUtils;
 import com.wuda.yhan.code.generator.lang.util.StringUtils;
-import com.wuda.yhan.code.generator.lang.relational.Table;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -23,7 +22,7 @@ class EntityGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.underscore);
         className = StringUtils.firstCharToUpperCase(className);
         return className;
     }
@@ -35,18 +34,7 @@ class EntityGeneratorUtil {
      * @return 属性名称
      */
     static String toFieldName(String columnName) {
-        return JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
-    }
-
-    /**
-     * 根据列名生成字段名称.
-     *
-     * @param columnName 列名称
-     * @return 属性名称
-     */
-    static String toIsSetFieldName(String columnName) {
-        String fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
-        return StringUtils.addSuffix(fieldName, IsSetField.suffix);
+        return JavaNamingUtils.toCamelCase(columnName, Constant.underscore);
     }
 
     /**

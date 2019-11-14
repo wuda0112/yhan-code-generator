@@ -64,7 +64,7 @@ class PackageNameUtil {
 
     private static String dotSeparatedString(String schema) {
         char dot = '.';
-        String str = schema.toLowerCase().replace(Constant.word_separator, dot);
+        String str = schema.toLowerCase().replace(Constant.underscore, dot);
         int lastCharIndex = StringUtils.lastCharIndex(str);
         if (str.charAt(lastCharIndex) == dot) {
             str = StringUtils.removeLastChar(str);

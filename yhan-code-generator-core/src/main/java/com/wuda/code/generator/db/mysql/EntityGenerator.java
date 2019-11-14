@@ -2,7 +2,6 @@ package com.wuda.code.generator.db.mysql;
 
 import com.squareup.javapoet.*;
 import com.wuda.code.generator.MethodSpecUtil;
-import com.wuda.yhan.code.generator.lang.IsSetField;
 import com.wuda.yhan.code.generator.lang.TableEntity;
 import com.wuda.yhan.code.generator.lang.relational.Column;
 import com.wuda.yhan.code.generator.lang.relational.Table;
@@ -24,16 +23,19 @@ public class EntityGenerator {
      *
      * @param table       表的基本信息
      * @param packageName 生成的类所属的包
+     * @param jpa         是否生成jap相关的注解
      * @return java file
      */
-    public JavaFile genJavaFile(Table table, String packageName) {
+    public JavaFile genJavaFile(Table table, String packageName, boolean jpa) {
         String className = EntityGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.addSuperinterface(TypeName.get(TableEntity.class));
         classBuilder.addSuperinterface(TypeName.get(Serializable.class));
-        classBuilder.addAnnotation(genTableAnnotation(table));
-        Iterable<FieldSpec> fieldSpecs = genFields(table.columns());
+        if (jpa) {
+            classBuilder.addAnnotation(genTableAnnotation(table));
+        }
+        Iterable<FieldSpec> fieldSpecs = genFields(table.columns(), jpa);
         if (fieldSpecs != null) {
             classBuilder.addFields(fieldSpecs);
             classBuilder.addMethods(genGetterAndSetter(fieldSpecs));
@@ -73,16 +75,16 @@ public class EntityGenerator {
      * 为列生成对应的属性.
      *
      * @param columns 列
+     * @param jpa     是否生成jpa相关的注解
      * @return iterator of fields
      */
-    private Iterable<FieldSpec> genFields(List<Column> columns) {
+    private Iterable<FieldSpec> genFields(List<Column> columns, boolean jpa) {
         if (columns == null || columns.isEmpty()) {
             return null;
         }
         List<FieldSpec> list = new ArrayList<>(columns.size());
         for (Column column : columns) {
-            list.add(genField(column));
-            list.add(genIsSetField(column));
+            list.add(genField(column, jpa));
         }
         return list;
     }
@@ -91,44 +93,19 @@ public class EntityGenerator {
      * 生成列对应的属性.
      *
      * @param column 列
+     * @param jpa    是否生成jpa相关注解
      * @return 属性
      */
-    private FieldSpec genField(Column column) {
+    private FieldSpec genField(Column column, boolean jpa) {
         String columnName = column.name();
         Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
         String fieldName = EntityGeneratorUtil.toFieldName(columnName);
-        AnnotationSpec annotationSpec = genColumnAnnotation(column);
-        return FieldSpec.builder(type, fieldName, Modifier.PRIVATE)
-                .addAnnotation(annotationSpec)
-                .build();
-    }
-
-    /**
-     * 如果列的名称是: product_name,此方法将生成<pre>private boolean productNameIsSet;</pre>
-     * 属性.
-     *
-     * @param column 列
-     * @return field
-     */
-    private FieldSpec genIsSetField(Column column) {
-        String columnName = column.name();
-        String fieldName = EntityGeneratorUtil.toIsSetFieldName(columnName);
-        return FieldSpec.builder(TypeName.BOOLEAN, fieldName, Modifier.PRIVATE)
-                .addAnnotation(genIsSetFieldAnnotation(columnName))
-                .build();
-    }
-
-    /**
-     * 生成{@link IsSetField}注解.
-     *
-     * @param columnName 列名
-     * @return {@link IsSetField}
-     */
-    private AnnotationSpec genIsSetFieldAnnotation(String columnName) {
-        String referenceFieldName = EntityGeneratorUtil.toFieldName(columnName);
-        return AnnotationSpec.builder(IsSetField.class)
-                .addMember("referenceField", "$S", referenceFieldName)
-                .build();
+        FieldSpec.Builder builder = FieldSpec.builder(type, fieldName, Modifier.PRIVATE);
+        if (jpa) {
+            AnnotationSpec annotationSpec = genColumnAnnotation(column);
+            builder.addAnnotation(annotationSpec);
+        }
+        return builder.build();
     }
 
     /**
@@ -141,24 +118,9 @@ public class EntityGenerator {
         List<MethodSpec> list = new ArrayList<>();
         for (FieldSpec fieldSpec : fieldSpecs) {
             list.add(MethodSpecUtil.genGetter(fieldSpec));
-            if (!hasIsSetFieldAnnotation(fieldSpec.annotations)) {
-                list.add(MethodSpecUtil.genSetter(fieldSpec, true));
-            }
+            list.add(MethodSpecUtil.genSetter(fieldSpec));
         }
         return list;
-    }
-
-    private boolean hasIsSetFieldAnnotation(List<AnnotationSpec> annotationSpecs) {
-        if (annotationSpecs == null || annotationSpecs.isEmpty()) {
-            return false;
-        }
-        TypeName isSetFieldAnnotation = TypeName.get(IsSetField.class);
-        for (AnnotationSpec annotationSpec : annotationSpecs) {
-            if (annotationSpec.type.equals(isSetFieldAnnotation)) {
-                return true;
-            }
-        }
-        return false;
     }
 
 }

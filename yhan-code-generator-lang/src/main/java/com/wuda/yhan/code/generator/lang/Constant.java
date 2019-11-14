@@ -10,7 +10,7 @@ public class Constant {
     /**
      * 单词之间的分隔符.通常很多表名或者列名用下划线分隔,比如: product_name.
      */
-    public static char word_separator = '_';
+    public static char underscore = '_';
 
     /**
      * mapper中insert方法的名称.
@@ -87,6 +87,11 @@ public class Constant {
     public final static String RETRIEVE_COLUMNS = "retrieveColumns";
 
     /**
+     * retrieveColumnArray.
+     */
+    public final static String RETRIEVE_COLUMN_ARRAY = "retrieveColumnArray";
+
+    /**
      * for update suffix.
      */
     public final static String FOR_UPDATE_SUFFIX = "ForUpdate";
@@ -129,6 +134,11 @@ public class Constant {
      * 每个表的sql table的实例名.
      */
     public final static String SQL_TABLE_INSTANCE = "instance";
+
+    /**
+     * 排序.
+     */
+    public final static String ORDER_BY = "orderBy";
 
 
 }

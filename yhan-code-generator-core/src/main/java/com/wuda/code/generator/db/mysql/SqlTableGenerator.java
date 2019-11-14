@@ -21,39 +21,40 @@ public class SqlTableGenerator {
     /**
      * 生成java class文件.
      *
-     * @param table       表的基本信息
-     * @param packageName 生成的类所属的包
+     * @param table                  表的基本信息
+     * @param userSpecifyPackageName 用户指定的包名称
      * @return java file
      */
-    public JavaFile genJavaFile(Table table, String packageName) {
+    public JavaFile genJavaFile(Table table, String userSpecifyPackageName) {
         String className = SqlTableGeneratorUtil.toClassName(table.id().table());
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className);
         classBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         classBuilder.superclass(TypeName.get(SqlTable.class));
-        classBuilder.addMethod(genConstructor(table));
-        classBuilder.addField(genInstanceField(table, packageName));
-        Iterable<FieldSpec> fieldSpecs = genFields(table);
+        classBuilder.addMethod(genConstructor(table, userSpecifyPackageName));
+        classBuilder.addField(genInstanceField(table, userSpecifyPackageName));
+        Iterable<FieldSpec> fieldSpecs = genFields(table, userSpecifyPackageName);
         if (fieldSpecs != null) {
             classBuilder.addFields(fieldSpecs);
         }
-        String finalPackageName = PackageNameUtil.getSqlTablePackageName(packageName, table.id().schema());
+        String finalPackageName = PackageNameUtil.getSqlTablePackageName(userSpecifyPackageName, table.id().schema());
         return JavaFile.builder(finalPackageName, classBuilder.build()).build();
     }
 
     /**
      * 为列生成对应的属性.
      *
-     * @param table table
+     * @param table                  table
+     * @param userSpecifyPackageName 包名
      * @return iterator of fields
      */
-    private Iterable<FieldSpec> genFields(Table table) {
+    private Iterable<FieldSpec> genFields(Table table, String userSpecifyPackageName) {
         List<Column> columns = table.columns();
         if (columns == null || columns.isEmpty()) {
             return null;
         }
         List<FieldSpec> list = new ArrayList<>(columns.size());
         for (Column column : columns) {
-            list.add(genField(column));
+            list.add(genField(table, column, userSpecifyPackageName));
         }
         return list;
     }
@@ -61,30 +62,37 @@ public class SqlTableGenerator {
     /**
      * 生成列对应的属性.
      *
-     * @param column 列
+     * @param table                  table
+     * @param column                 列
+     * @param userSpecifyPackageName 包名
      * @return 属性
      */
-    private FieldSpec genField(Column column) {
+    private FieldSpec genField(Table table, Column column, String userSpecifyPackageName) {
+        TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+
         String columnName = column.name();
         Class<?> type = MysqlTypeUtil.mysqlTypeToJavaType(column.typeExpression());
         String fieldName = TableMetaInfoGeneratorUtil.toFieldName(columnName);
         ClassName sqlColumnClassName = ClassName.get(SqlColumn.class);
         ParameterizedTypeName sqlColumnParameterizedTypeName = ParameterizedTypeName.get(sqlColumnClassName, ClassName.get(type));
         return FieldSpec.builder(sqlColumnParameterizedTypeName, fieldName, Modifier.PUBLIC, Modifier.FINAL)
-                .initializer("column($S)", columnName)
+                .initializer("column($L.$L)", tableMetaInfo, fieldName)
                 .build();
     }
 
     /**
      * 生成构造函数.
      *
-     * @param table table
+     * @param table                  table
+     * @param userSpecifyPackageName 用户指定的包名
      * @return 构造函数
      */
-    private MethodSpec genConstructor(Table table) {
+    private MethodSpec genConstructor(Table table, String userSpecifyPackageName) {
+        TypeName tableMetaInfo = TableMetaInfoGeneratorUtil.getTypeName(table, userSpecifyPackageName);
+        String tableName = TableMetaInfoGeneratorUtil.getTableFieldName();
         return MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
-                .addStatement("super($S)", table.id().table())
+                .addStatement("super($L.$L)", tableMetaInfo, tableName)
                 .build();
     }
 

@@ -4,10 +4,10 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
-import com.wuda.yhan.code.generator.lang.util.SqlProviderUtils;
 import com.wuda.yhan.code.generator.lang.relational.Column;
-import com.wuda.yhan.code.generator.lang.util.ColumnUtils;
 import com.wuda.yhan.code.generator.lang.relational.Table;
+import com.wuda.yhan.code.generator.lang.util.ColumnUtils;
+import com.wuda.yhan.code.generator.lang.util.SqlProviderUtils;
 
 import javax.lang.model.element.Modifier;
 import java.util.ArrayList;
@@ -60,8 +60,8 @@ public class TableMetaInfoGenerator {
         }
         List<FieldSpec> list = new ArrayList<>(columns.size());
         for (Column column : columns) {
-            list.add(genField(column));
-            list.add(genAsField(column));
+            list.add(genField(table, column));
+            list.add(genAsField(table, column));
             list.add(genAsFieldConcatTableName(table, column));
         }
         return list;
@@ -74,9 +74,7 @@ public class TableMetaInfoGenerator {
      * @return field
      */
     private FieldSpec genTableNameField(Table table) {
-        return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getTableFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
-                .initializer("$S", table.id().table())
-                .build();
+        return genField(TableMetaInfoGeneratorUtil.getTableFieldName(), table.id().table());
     }
 
     /**
@@ -98,9 +96,7 @@ public class TableMetaInfoGenerator {
      * @return field
      */
     private FieldSpec genSchemaDotTableField(Table table) {
-        return FieldSpec.builder(ClassName.get(String.class), TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName(), Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
-                .initializer("$S", table.id().toQuotedString('`'))
-                .build();
+        return genField(TableMetaInfoGeneratorUtil.getSchemaDotTableFieldName(), TableMetaInfoGeneratorUtil.getSchemaDotTableFieldValue(table));
     }
 
     /**
@@ -136,30 +132,29 @@ public class TableMetaInfoGenerator {
     /**
      * 生成列对应的属性.
      *
+     * @param table  表
      * @param column 列
      * @return 属性
      */
-    private FieldSpec genField(Column column) {
+    private FieldSpec genField(Table table, Column column) {
         String columnName = column.name();
         String fieldName = TableMetaInfoGeneratorUtil.toFieldName(columnName);
-        return FieldSpec.builder(ClassName.get(String.class), fieldName, Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
-                .initializer("$S", columnName)
-                .build();
+        String fieldValue = TableMetaInfoGeneratorUtil.getSchemaDotTableFieldValue(table) + "." + columnName;
+        return genField(fieldName, fieldValue);
     }
 
     /**
      * 生成列对应的别名属性.
      *
+     * @param table  表
      * @param column 列
      * @return 属性
      */
-    private FieldSpec genAsField(Column column) {
+    private FieldSpec genAsField(Table table, Column column) {
         String columnName = column.name();
         String fieldName = TableMetaInfoGeneratorUtil.toAsFieldName(columnName);
         String fieldValue = TableMetaInfoGeneratorUtil.getAsFieldValue(columnName);
-        return FieldSpec.builder(ClassName.get(String.class), fieldName, Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
-                .initializer("$S", fieldValue)
-                .build();
+        return genField(fieldName, fieldValue);
     }
 
     /**
@@ -173,6 +168,10 @@ public class TableMetaInfoGenerator {
         String columnName = column.name();
         String fieldName = TableMetaInfoGeneratorUtil.toAsFieldNameConcatTable(columnName);
         String fieldValue = TableMetaInfoGeneratorUtil.getAsFieldValueConcatTableName(table.id().table(), columnName);
+        return genField(fieldName, fieldValue);
+    }
+
+    private FieldSpec genField(String fieldName, String fieldValue) {
         return FieldSpec.builder(ClassName.get(String.class), fieldName, Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
                 .initializer("$S", fieldValue)
                 .build();

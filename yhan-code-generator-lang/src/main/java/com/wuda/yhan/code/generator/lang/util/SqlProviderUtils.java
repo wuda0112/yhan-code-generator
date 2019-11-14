@@ -1,11 +1,15 @@
 package com.wuda.yhan.code.generator.lang.util;
 
 import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.OrderBy;
 import com.wuda.yhan.code.generator.lang.TableEntity;
 import org.apache.ibatis.jdbc.SQL;
+import org.mybatis.dynamic.sql.SqlColumn;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -50,7 +54,12 @@ public class SqlProviderUtils {
                                                                    List<? extends TableEntity> list,
                                                                    String collectionName,
                                                                    String autoIncrementColumn) {
-        Map<String, String> fieldToColumnMap = TableEntityUtils.fieldToColumn(list.get(0).getClass());
+        if (list == null || list.isEmpty()) {
+            throw new RuntimeException("批量插入的数据不能为空");
+        }
+        // 同一类型,任意取一个即可
+        Class<? extends TableEntity> arbitrary = list.get(0).getClass();
+        Map<String, String> fieldToColumnMap = TableEntityUtils.fieldToColumn(arbitrary);
         Set<Map.Entry<String, String>> entrySet = fieldToColumnMap.entrySet();
         // auto-increment 列排除
         String[] columns = new String[fieldToColumnMap.size() - 1];
@@ -66,7 +75,7 @@ public class SqlProviderUtils {
                 continue;
             }
             columns[index] = columnName;
-            fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
+            fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.underscore);
             columnValuePlaceholder = "#{" + collectionName + "[" + placeholder + "]." + fieldName + "}";
             valueStatementTemplateBuilder.append(columnValuePlaceholder);
             if (index != columns.length - 1) {
@@ -77,17 +86,18 @@ public class SqlProviderUtils {
         String valueStatementTemplate = valueStatementTemplateBuilder.toString();
         int k = 0;
         StringBuilder builder = new StringBuilder();
-        String autoIncrementField = JavaNamingUtils.toCamelCase(autoIncrementColumn, Constant.word_separator);
+        String autoIncrementField = JavaNamingUtils.toCamelCase(autoIncrementColumn, Constant.underscore);
+        Method autoIncrementFieldGetter = BeanUtils.getter(arbitrary, autoIncrementField);
         for (TableEntity entity : list) {
             if (k != 0) {
                 builder.append("(");
             }
-            Object autoIncrementColumnValue = BeanUtils.getValue(entity, autoIncrementField);
+            Object autoIncrementColumnValue = BeanUtils.getValue(entity, autoIncrementFieldGetter);
             if (autoIncrementColumnValue != null) {
-                throw new RuntimeException("batch insert,从数据库取回自增值时" +
-                        ",必须使用数据库自增,不能提前设置值,否则会出现混乱" +
-                        ".column=" + autoIncrementColumn + " 设置了值" +
-                        ".可以考虑使用" + Constant.MAPPER_BATCH_INSERT);
+                throw new RuntimeException("如果想使用useGeneratedKeys特性,必须使用数据库的自增值,不能提前设置值,否则会出现混乱" +
+                        ".column " + autoIncrementColumn + " 设置了值" +
+                        ".如果自己设置值,可以考虑使用" + Constant.MAPPER_BATCH_INSERT +
+                        "方法");
             }
             String value = valueStatementTemplate.replaceAll(placeholder, k + "");
             builder.append(value);
@@ -125,12 +135,12 @@ public class SqlProviderUtils {
     /**
      * 校验实体类中已经调用过<strong>set</strong>方法的属性.
      *
-     * @param entity                       实体类
-     * @param setterCalledFieldToColumnMap 实体类中调用过set方法的属性集.key-调用过set方法的属性,value-属性对应的表的列
+     * @param entity                  实体类
+     * @param nonNullFieldToColumnMap 实体类中调用过set方法的属性集.key-调用过set方法的属性,value-属性对应的表的列
      */
-    public static void setterCalledFieldValidate(TableEntity entity, Map<String, String> setterCalledFieldToColumnMap) {
-        if (setterCalledFieldToColumnMap == null || setterCalledFieldToColumnMap.size() == 0) {
-            throw new RuntimeException("没有属性调用过set方法! Class Name:" + entity.getClass().getName());
+    public static void noneNullFieldValidate(TableEntity entity, Map<String, String> nonNullFieldToColumnMap) {
+        if (nonNullFieldToColumnMap == null || nonNullFieldToColumnMap.size() == 0) {
+            throw new RuntimeException("所有字段都为null! Class Name:" + entity.getClass().getName());
         }
     }
 
@@ -173,6 +183,40 @@ public class SqlProviderUtils {
     }
 
     /**
+     * 转换成字符串数组形式.
+     *
+     * @param sqlColumns list of sql column
+     * @return 字符串数组形式的结果
+     */
+    public static String[] sqlColumnsToArray(List<SqlColumn> sqlColumns) {
+        if (sqlColumns == null || sqlColumns.isEmpty()) {
+            return null;
+        }
+        String[] columnArray = new String[sqlColumns.size()];
+        StringBuilder builder = new StringBuilder();
+        String alias;
+        for (int i = 0; i < sqlColumns.size(); i++) {
+            SqlColumn sqlColumn = sqlColumns.get(i);
+            builder.append(sqlColumn.name());
+            alias = getColumnAlias(sqlColumn);
+            if (alias != null && !alias.isEmpty()) {
+                builder.append(" AS ").append(alias);
+            }
+            columnArray[i] = builder.toString();
+            builder.delete(0, builder.length());
+        }
+        return columnArray;
+    }
+
+    private static String getColumnAlias(SqlColumn sqlColumn) {
+        Optional optional = sqlColumn.alias();
+        if (optional.isPresent()) {
+            return optional.get().toString();
+        }
+        return null;
+    }
+
+    /**
      * sql 语法中的<i>WHERE</i>条件部分.
      *
      * @param sql          {@link SQL}
@@ -181,7 +225,7 @@ public class SqlProviderUtils {
     public static void whereConditions(SQL sql, String... whereClauses) {
         String fieldName;
         for (String columnName : whereClauses) {
-            fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
+            fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.underscore);
             sql.WHERE(columnName + "=#{" + fieldName + "}");
         }
     }
@@ -215,7 +259,7 @@ public class SqlProviderUtils {
                 stringBuilder.append("(");
                 for (int k = 0; k < whereClauses.length; k++) {
                     columnName = whereClauses[k];
-                    fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.word_separator);
+                    fieldName = JavaNamingUtils.toCamelCase(columnName, Constant.underscore);
                     stringBuilder.append(columnName).append("=")
                             .append("#{")
                             .append(collectionName)
@@ -242,6 +286,44 @@ public class SqlProviderUtils {
      */
     public static void appendPaging(StringBuilder builder) {
         builder.append(" LIMIT #{").append(Constant.PAGING_OFFSET).append("},#{").append(Constant.PAGING_ROW_COUNT).append("}");
+    }
+
+    /**
+     * 追加排序参数.
+     *
+     * @param builder     sql statement
+     * @param orderByList 排序参数
+     */
+    public static void appendOrderBy(StringBuilder builder, List<OrderBy> orderByList) {
+        if (orderByList == null || orderByList.isEmpty()) {
+            return;
+        }
+        builder.append(" ORDER BY ");
+        for (int index = 0; index < orderByList.size(); index++) {
+            if (index > 0) {
+                builder.append(",");
+            }
+            OrderBy orderBy = orderByList.get(index);
+            builder.append(orderBy.getColumn()).append(" ").append(orderBy.getOrder());
+        }
+    }
+
+    /**
+     * 追加排序参数.
+     *
+     * @param sql         sql statement
+     * @param orderByList 排序参数
+     */
+    public static void appendOrderBy(SQL sql, List<OrderBy> orderByList) {
+        if (orderByList == null || orderByList.isEmpty()) {
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (OrderBy orderBy : orderByList) {
+            builder.append(orderBy.getColumn()).append(" ").append(orderBy.getOrder());
+            sql.ORDER_BY(builder.toString());
+            builder.delete(0, builder.length());
+        }
     }
 
     /**

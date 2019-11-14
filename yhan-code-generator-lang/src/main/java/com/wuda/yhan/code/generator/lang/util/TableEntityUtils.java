@@ -1,14 +1,17 @@
 package com.wuda.yhan.code.generator.lang.util;
 
-import com.wuda.yhan.code.generator.lang.*;
+import com.wuda.yhan.code.generator.lang.Constant;
+import com.wuda.yhan.code.generator.lang.PojoFieldInfo;
+import com.wuda.yhan.code.generator.lang.TableEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.Column;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link TableEntity}的工具类.
@@ -44,13 +47,12 @@ public class TableEntityUtils {
     /**
      * key是属性名称,value该属性对应的数据库表的列名.
      *
-     * @param entity                表对应的实体
-     * @param onlySetterCalledField 是否值获取调用过setter方法的属性,
-     *                              具体查看{@link IsSetField}定义
+     * @param entity           表对应的实体
+     * @param onlyNotNullField 是否只获取值不为<code>null</code>的属性
      * @return field和column的映射
      */
-    public static Map<String, String> fieldToColumn(TableEntity entity, boolean onlySetterCalledField) {
-        Field[] fields = getField(entity, onlySetterCalledField);
+    public static Map<String, String> fieldToColumn(TableEntity entity, boolean onlyNotNullField) {
+        Field[] fields = getField(entity, onlyNotNullField);
         return fieldToColumn(fields);
     }
 
@@ -68,13 +70,12 @@ public class TableEntityUtils {
     /**
      * key是属性名称,value是该属性的值.
      *
-     * @param entity                表对应的实体
-     * @param onlySetterCalledField 是否值获取调用过setter方法的属性,
-     *                              具体查看{@link IsSetField}定义
+     * @param entity           表对应的实体
+     * @param onlyNotNullField 是否只获取值不为<code>null</code>的属性
      * @return field和value的映射
      */
-    public static Map<String, Object> fieldToValue(TableEntity entity, boolean onlySetterCalledField) {
-        Field[] fields = getField(entity, onlySetterCalledField);
+    public static Map<String, Object> fieldToValue(TableEntity entity, boolean onlyNotNullField) {
+        Field[] fields = getField(entity.getClass());
         if (fields == null || fields.length == 0) {
             return null;
         }
@@ -82,14 +83,10 @@ public class TableEntityUtils {
         for (Field field : fields) {
             String fieldName = field.getName();
             Method getter = BeanUtils.getter(entity.getClass(), field.getName());
-            Object fieldValue = null;
-            try {
-                fieldValue = getter.invoke(entity);
-            } catch (Exception e) {
-                // 自动生成的代码,肯定会有getter方法,一般不会来到这里
-                logger.warn(e.getMessage(), e);
+            Object fieldValue = getValue(entity, getter);
+            if (onlyNotNullField && fieldValue != null) {
+                map.put(fieldName, fieldValue);
             }
-            map.put(fieldName, fieldValue);
         }
         return map;
     }
@@ -111,13 +108,6 @@ public class TableEntityUtils {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T extends Annotation> Set<Class<T>> onlyColumnAnnotation() {
-        Set<Class<T>> annotationClassSet = new HashSet<>();
-        annotationClassSet.add((Class<T>) Column.class);
-        return annotationClassSet;
-    }
-
     /**
      * key是属性名称,value该属性对应的数据库表的列名.
      *
@@ -130,26 +120,23 @@ public class TableEntityUtils {
         }
         Map<String, String> map = new HashMap<>();
         for (Field field : fields) {
-            Column columnAnnotation = field.getAnnotation(Column.class);
-            String columnName = columnAnnotation.name();
+            String columnName = JavaNamingUtils.toUnderscoreCase(field.getName());
             map.put(field.getName(), columnName);
         }
         return map;
     }
 
     /**
-     * 获取{@link TableEntity}的属性,<strong>注意</strong>不包含
-     * {@link IsSetField}标记的属性.
+     * 获取{@link TableEntity}的属性.
      *
-     * @param entity                表对应的实体
-     * @param onlySetterCalledField 是否值获取调用过setter方法的属性,
-     *                              具体查看{@link IsSetField}定义
+     * @param entity           表对应的实体
+     * @param onlyNotNullField 是否只获取值不为<code>null</code>的属性
      * @return fields
      */
-    private static Field[] getField(TableEntity entity, boolean onlySetterCalledField) {
+    private static Field[] getField(TableEntity entity, boolean onlyNotNullField) {
         Field[] fields;
-        if (onlySetterCalledField) {
-            fields = IsSetFieldUtils.setterCalledFields(entity);
+        if (onlyNotNullField) {
+            fields = getNotNullField(entity);
         } else {
             fields = getField(entity.getClass());
         }
@@ -157,14 +144,13 @@ public class TableEntityUtils {
     }
 
     /**
-     * 获取{@link TableEntity}的属性,<strong>注意</strong>不包含
-     * {@link IsSetField}标记的属性.
+     * 获取{@link TableEntity}的属性.
      *
      * @param clazz class
      * @return fields
      */
     private static Field[] getField(Class<? extends TableEntity> clazz) {
-        List<PojoFieldInfo> fieldInfoList = BeanUtils.getFieldInfoList(clazz, false, false, onlyColumnAnnotation(), BeanUtils.AnnotationContainsPolicy.CONTAINS_ALL);
+        List<PojoFieldInfo> fieldInfoList = BeanUtils.getFieldInfoList(clazz, false, false, null, null);
         if (fieldInfoList == null || fieldInfoList.isEmpty()) {
             return null;
         }
@@ -173,6 +159,37 @@ public class TableEntityUtils {
             fields[i] = fieldInfoList.get(i).getField();
         }
         return fields;
+    }
+
+    /**
+     * 获取{@link TableEntity}的属性.
+     *
+     * @param entity 实体类
+     * @return fields
+     */
+    private static Field[] getNotNullField(TableEntity entity) {
+        List<PojoFieldInfo> fieldInfoList = BeanUtils.getFieldInfoList(entity.getClass(), true, false, null, null);
+        if (fieldInfoList == null || fieldInfoList.isEmpty()) {
+            return null;
+        }
+        List<Field> fields = new ArrayList<>(fieldInfoList.size());
+        for (PojoFieldInfo pojoFieldInfo : fieldInfoList) {
+            Method method = pojoFieldInfo.getGetter();
+            if (getValue(entity, method) != null) {
+                fields.add(pojoFieldInfo.getField());
+            }
+        }
+        return fields.toArray(new Field[]{});
+    }
+
+    private static Object getValue(TableEntity entity, Method getter) {
+        try {
+            return getter.invoke(entity);
+        } catch (Exception e) {
+            // 自动生成的代码,肯定会有getter方法,一般不会来到这里
+            logger.warn(e.getMessage(), e);
+            return null;
+        }
     }
 
 }

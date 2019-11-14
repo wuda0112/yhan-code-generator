@@ -112,6 +112,17 @@ public class BeanUtils {
         if (getter == null) {
             throw new RuntimeException(bean.getClass().getCanonicalName() + ",field=" + fieldName + ",没有getter");
         }
+        return getValue(bean, getter);
+    }
+
+    /**
+     * 获取java bean中getter方法的返回值.
+     *
+     * @param bean   java bean
+     * @param getter getter
+     * @return 返回值
+     */
+    public static Object getValue(Object bean, Method getter) {
         try {
             return getter.invoke(bean);
         } catch (Exception e) {

@@ -14,7 +14,7 @@ public class EntityGeneratorTest extends GeneratorTestBase {
         TableTest tableTest = new TableTest();
         List<Table> tables = tableTest.getTable();
         for (Table table : tables) {
-            JavaFile javaFile = entityGenerator.genJavaFile(table, packageName);
+            JavaFile javaFile = entityGenerator.genJavaFile(table, packageName, false);
             printAndWrite(javaFile);
         }
 

@@ -1,5 +1,8 @@
 package com.wuda.yhan.code.generator.lang.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * string util.
  *
@@ -132,5 +135,54 @@ public class StringUtils {
      */
     public static int lastCharIndex(CharSequence charSequence) {
         return charSequence.length() - 1;
+    }
+
+    /**
+     * 获取首字母缩写.
+     *
+     * @param string        string
+     * @param wordSeparator 分隔符
+     * @return 首字母缩写
+     */
+    public static String acronym(String string, char wordSeparator) {
+        if (string == null || string.isEmpty()) {
+            return string;
+        }
+        List<String> words = split(string, wordSeparator);
+        StringBuilder builder = new StringBuilder(words.size());
+        for (String word : words) {
+            if (word != null && !word.isEmpty()) {
+                builder.append(word.charAt(0));
+            }
+        }
+        return builder.toString();
+    }
+
+    /**
+     * split.
+     *
+     * @param string        string
+     * @param wordSeparator 分隔符
+     * @return list of strings
+     */
+    public static List<String> split(String string, char wordSeparator) {
+        if (string == null || string.isEmpty()) {
+            return null;
+        }
+        StringBuilder builder = new StringBuilder();
+        List<String> list = new ArrayList<>(2);
+        char[] chars = string.toCharArray();
+        for (char ch : chars) {
+            if (ch != wordSeparator) {
+                builder.append(ch);
+            } else {
+                list.add(builder.toString());
+                builder.delete(0, builder.length());
+            }
+        }
+        if (builder.length() > 0) {
+            list.add(builder.toString());
+        }
+        return list;
     }
 }

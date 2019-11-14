@@ -26,7 +26,7 @@ class SqlBuilderGeneratorUtil {
      * @return 类名
      */
     static String toClassName(String tableName) {
-        String className = JavaNamingUtils.toCamelCase(tableName, Constant.word_separator);
+        String className = JavaNamingUtils.toCamelCase(tableName, Constant.underscore);
         className = StringUtils.firstCharToUpperCase(className);
         className = StringUtils.addSuffix(className, suffix);
         return className;
