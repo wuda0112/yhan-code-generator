@@ -3,12 +3,12 @@
     <parent>
         <artifactId>yhan-code-generator</artifactId>
         <groupId>io.github.wuda0112</groupId>
-        <version>1.0.2</version>
+        <version>1.0.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>yhan-code-generator-lang</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
